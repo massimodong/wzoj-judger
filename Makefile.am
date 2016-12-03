@@ -9,7 +9,7 @@ dist_doc_DATA = \
 	AUTHORS \
 	ChangeLog \
 	INSTALL \
-	NEWS
+	NEWS 
 
 
 INTLTOOL_FILES = intltool-extract.in \

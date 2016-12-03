@@ -18,3 +18,4 @@ intltool-update.in
 ltmain.sh
 missing
 po/Makefile.in.in
+*~
