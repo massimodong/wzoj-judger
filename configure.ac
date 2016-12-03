@@ -34,6 +34,8 @@ LT_INIT
 
 
 
+PKG_CHECK_MODULES(JSONCPP,jsoncpp)
+
 AC_OUTPUT([
 Makefile
 src/Makefile

@@ -4,7 +4,8 @@
 
 AM_CPPFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(localedir)"\" \
-	-DPACKAGE_SRC_DIR=\""$(srcdir)"\" \
+	-DPACKAGE_SRC_DIR=\""$(srcdir). \
+	$(jsoncpp_CFLAGS)"\" \
 	-DPACKAGE_DATA_DIR=\""$(pkgdatadir)"\"
 
 AM_CFLAGS =\
@@ -18,6 +19,7 @@ wzoj_judger_SOURCES = \
 
 wzoj_judger_LDFLAGS = 
 
-wzoj_judger_LDADD = 
+wzoj_judger_LDADD =  \
+	$(jsoncpp_LIBS)
 
 
