@@ -38,12 +38,42 @@ void http_login(){
 	par["name"] = OJ_USERNAME;
 	par["password"] = OJ_PASSWORD;
 	Json::Value val = http_post("/auth/login", par);
+	//std::cout<<val<<std::endl;
 }
 
 void init_http(){
+	/*remove old cookie file*/
+	std::string cookie_path = OJ_HOME + std::string("/cookie");
+	std::remove(cookie_path.c_str());
+
+	/*initiate*/
 	curl_global_init(CURL_GLOBAL_ALL);
 	http_get_token();
 	http_login();
+
+	/*check roles*/
+	bool isJudger=false,isAdmin=false;
+	std::map<std::string, std::string> par;
+	Json::Value roles = http_get("/ajax/roles", par);
+	for(int i=0;i<roles.size();++i){
+		if(OJ_DEBUG){
+			std::cout<<"Current user has role "
+				<<roles[i]["name"].asString()<<std::endl;
+		}
+		if(roles[i]["name"].asString() == "judger") isJudger = true;
+		if(roles[i]["name"].asString() == "admin") isAdmin = true;
+	}
+	if(isAdmin) isJudger = true;
+	if(isAdmin && !OJ_ALLOWADMIN){
+		std::cerr<<"A user with role \"admin\" is not allowed"<<std::endl
+			<<"Use --allow-admin.(Not recommended)"<<std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	if(!isJudger){
+		std::cerr<<"not judger!"<<std::endl;
+		exit(EXIT_FAILURE);
+	}
 }
 
 size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp){

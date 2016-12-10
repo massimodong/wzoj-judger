@@ -17,8 +17,14 @@
 
 #include <wzoj-judger.h>
 
+const char version[] = "0.1";
+
 void print_version(){
-	std::cout<<"wzoj-judger (WZOJ) 0.1"<<std::endl;
+	std::cout<<"wzoj-judger (WZOJ) "<<version<<std::endl;
+	std::cout<<"Copyright (C) 2017 Free Software Foundation, Inc.\n\
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.\n";
 }
 
 void print_help(){
@@ -29,9 +35,18 @@ void print_help(){
 	-h, --help        display this help and exit\n\
 	-v, --version     display version information and exit\n",
 	      stdout);
+	
 	puts("");
 	fputs("\
-	--debug           run in debug mode\n\
-	--cd=PATH         change judger's home directory\n",
+	--debug           debug mode\n\
+	--cd=PATH         change judger's home directory\n\
+	--once            exit after first solution\n\
+	--allow-admin     allow judger with role \"admin\"\n",
 	      stdout);
+
+	puts("");
+	fputs("Report bugs to: dongmassimo@gmail.com\n\
+pkg home page: <https://github.com/massimodong/wzoj-judger>\n\
+General help using GNU software: <http://www.gnu.org/gethelp/>\n"
+	      ,stdout);
 }

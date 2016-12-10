@@ -35,6 +35,7 @@ extern int OJ_DEBUG;
 extern char *OJ_PROGRAMNAME;
 extern char *OJ_HOME;
 extern bool OJ_ONCE;
+extern bool OJ_ALLOWADMIN;
 
 extern const char *OJ_URL;
 extern const char *OJ_USERNAME;
