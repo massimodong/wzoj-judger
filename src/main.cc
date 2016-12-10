@@ -17,20 +17,22 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-char OJ_HOME_DEFAULT[] = "/home/judge";
-char TEMP_USERNAME[]="judger";
-char TEMP_PASSWORD[]="123456";
-char TEMP_URL[]="localhost/";
+char OJ_HOME_DEFAULT[] = "/home/judger";
 
 #include <wzoj-judger.h>
 
 /**
+ * json Config
+ **/
+Json::Value jsonConfigValue;
+
+/**
  * read from configure file
  */
-char *OJ_URL = TEMP_URL;
-char *OJ_USERNAME = TEMP_USERNAME;
-char *OJ_PASSWORD = TEMP_PASSWORD;
-bool OJ_ONCE = false;
+const char *OJ_URL = NULL;
+const char *OJ_USERNAME = NULL;
+const char *OJ_PASSWORD = NULL;
+int OJ_MAXRUNNING = 3;
 int OJ_SLEEPTIME = 10;
 
 /**
@@ -39,6 +41,7 @@ int OJ_SLEEPTIME = 10;
 int OJ_DEBUG = false;
 char *OJ_PROGRAMNAME=NULL;
 char *OJ_HOME=NULL;
+bool OJ_ONCE = false;
 
 static const option longopts[] =
 {
@@ -110,20 +113,21 @@ int main(int argc,char *argv[])
 
 	if(!OJ_DEBUG){
 		daemon_init();
-		system("/sbin/iptables -A OUTPUT -m owner --uid-owner judge -j DROP");
+		system("/sbin/iptables -A OUTPUT -m owner --uid-owner judger -j DROP");
 	}
-
-	init_config();
 
 	signal(SIGQUIT, call_for_exit);
     signal(SIGKILL, call_for_exit);
     signal(SIGTERM, call_for_exit);
+	
+	init_config();
+	init_http();
 
 	bool flag=true;
 	while(true){
 		while(flag){
 			flag = daemon_work();
-			if(OJ_ONCE){
+			if(flag && OJ_ONCE){
 				goto end;
 			}
 		}
@@ -138,7 +142,46 @@ end:
 	return 0;
 }
 
+void config_read_str(const char *&cfg,const char *idx){
+	char *buffer;
+	cfg = jsonConfigValue[idx].asString().c_str();
+	buffer = (char *)malloc(strlen(cfg)+1);
+	strcpy(buffer, cfg);
+	cfg = buffer;
+}
+
 void init_config(){
+	if(OJ_DEBUG){
+		std::cout<<"init configure"<<std::endl;
+	}
+
+	//path of the config file
+	std::string config_d("/etc/config.json");
+	std::string config_path = OJ_HOME + config_d;
+
+	//open config file
+	std::ifstream config(config_path.c_str(),
+	                         std::ifstream::binary);
+
+	//read config file
+	config>>jsonConfigValue;
+
+	config_read_str(OJ_URL, "url");
+	config_read_str(OJ_USERNAME, "username");
+	config_read_str(OJ_PASSWORD, "password");
+	OJ_SLEEPTIME = jsonConfigValue["sleep_time"].asInt();
+	OJ_MAXRUNNING = jsonConfigValue["max_running"].asInt();
+
+	OJ_MAXRUNNING = std::min(OJ_MAXRUNNING , 100);
+	
+	if(OJ_DEBUG){
+		std::cout<<"OJ_URL:"<<OJ_URL<<std::endl
+			<<"OJ_USERNAME:"<<OJ_USERNAME<<std::endl
+			<<"OJ_PASSWORD:"<<OJ_PASSWORD<<std::endl
+			<<"OJ_SLEEPTIME:"<<OJ_SLEEPTIME<<std::endl
+			<<"OJ_MAXRUNNING:"<<OJ_MAXRUNNING<<std::endl;
+		std::cout<<std::endl;
+	}
 }
 
 void daemon_init(){

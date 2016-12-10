@@ -18,10 +18,13 @@
  */
 
 #include <iostream>
+#include <fstream>
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <getopt.h>
+#include <sys/wait.h>
 #include <locale.h>
 #include <json/json.h>
 #include <vector>
@@ -31,11 +34,12 @@
 extern int OJ_DEBUG;
 extern char *OJ_PROGRAMNAME;
 extern char *OJ_HOME;
-
-extern char *OJ_URL;
-extern char *OJ_USERNAME;
-extern char *OJ_PASSWORD;
 extern bool OJ_ONCE;
+
+extern const char *OJ_URL;
+extern const char *OJ_USERNAME;
+extern const char *OJ_PASSWORD;
+extern int OJ_MAXRUNNING;
 extern int OJ_SLEEPTIME;
 
 /**
@@ -52,4 +56,11 @@ bool daemon_work();
 /**
  * http
  */
+void init_http();
+Json::Value http_get(std::string, std::map<std::string, std::string>);
 Json::Value http_post(std::string, std::map<std::string, std::string>);
+
+/**
+ * judger
+ **/
+void judge_solution(int,int);
