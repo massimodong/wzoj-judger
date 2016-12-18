@@ -43,6 +43,7 @@ char *OJ_PROGRAMNAME=NULL;
 char *OJ_HOME=NULL;
 bool OJ_ONCE = false;
 bool OJ_ALLOWADMIN = false;
+int OJ_SOLUTION_NO = -1;
 
 static const option longopts[] =
 {
@@ -52,6 +53,7 @@ static const option longopts[] =
   { "cd", required_argument, NULL, 'c'},
   { "once", no_argument, NULL, 'a'},
   { "allow-admin", no_argument, NULL, 'm'},
+  { "solution", required_argument, NULL, 's'},
   { NULL, 0, NULL, 0 } 
 };
 
@@ -89,6 +91,9 @@ int main(int argc,char *argv[])
 				OJ_ALLOWADMIN = true;
 				std::cout<<"WARNING: allowing admin users"<<std::endl;
 				break;
+			case 's':
+				sscanf(optarg, "%d", &OJ_SOLUTION_NO);
+				break;
 			default:
 				lose = true;
 				break;
@@ -121,17 +126,22 @@ int main(int argc,char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if(!OJ_DEBUG){
-		daemon_init();
-		system("/sbin/iptables -A OUTPUT -m owner --uid-owner judger -j DROP");
-	}
-
 	signal(SIGQUIT, call_for_exit);
     signal(SIGKILL, call_for_exit);
     signal(SIGTERM, call_for_exit);
 	
 	init_config();
 	init_http();
+
+	if(OJ_SOLUTION_NO > 0){
+		judge_solution(OJ_SOLUTION_NO, 0);
+		exit(EXIT_SUCCESS);
+	}
+
+	if(!OJ_DEBUG){
+		daemon_init();
+	}
+	system("/sbin/iptables -A OUTPUT -m owner --uid-owner judger -j DROP");
 
 	bool flag=true;
 	while(true){

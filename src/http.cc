@@ -81,6 +81,9 @@ size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp){
 	Json::Reader reader;
 	size_t realsize = size * nmemb;
 	reader.parse((char *)buffer, *((Json::Value *)userp));
+	if(OJ_DEBUG){
+		std::cout<<(*((Json::Value *)userp))<<std::endl;
+	}
 	return realsize;
 }
 

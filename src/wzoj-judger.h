@@ -30,12 +30,23 @@
 #include <vector>
 #include <map>
 
+const uid_t JUDGER_UID = 1536;
+const int MAX_TIME_LIMIT = 60000; // 1min
+const double MAX_MEM_LIMIT = 2048.00; // 2GB
+
+const int SL_PENDING = 0;
+const int SL_PENDING_REJUDGING = 1;
+const int SL_COMPILING = 2;
+const int SL_RUNNING = 3;
+const int SL_JUDGED = 4;
+const int SL_CANCELED = 5;
 
 extern int OJ_DEBUG;
 extern char *OJ_PROGRAMNAME;
 extern char *OJ_HOME;
 extern bool OJ_ONCE;
 extern bool OJ_ALLOWADMIN;
+extern int OJ_SOLUTION_NO;
 
 extern const char *OJ_URL;
 extern const char *OJ_USERNAME;
