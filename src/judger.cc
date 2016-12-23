@@ -95,6 +95,131 @@ void print_runtimeerror(char * err) {
         fclose(ferr);
 }
 
+int compare_files(const char *file1, const char *file2,
+                   std::string &verdict){
+	int ret = OJ_AC , pe_space = 0 , pe_n = 0;
+	FILE * f1, *f2;
+	char c1,c2;
+	f1 = fopen(file1, "re");
+	f2 = fopen(file2, "re");
+	if (!f1 || !f2){
+		ret = OJ_RE;
+		goto wzoj_end;
+	}
+	c1 = fgetc(f1);
+	c2 = fgetc(f2);
+
+	while(true){
+		if(c1 == EOF){
+			while(c2 != EOF){
+				if(!isspace(c2)){
+					ret = OJ_WA;
+					goto wzoj_end;
+				}
+				c2 = fgetc(f2);
+			}
+			goto wzoj_end;
+		}
+		if(c2 == EOF){
+			while(c1 != EOF){
+				if(!isspace(c1)){
+					ret = OJ_WA;
+					goto wzoj_end;
+				}
+				c1 = fgetc(f1);
+			}
+			goto wzoj_end;
+		}
+
+		if(c1 == '\r' && c2 == '\r'){
+		}else if(c1 == '\r' && c2 == '\n'){
+			c1 = fgetc(f1);
+			if(c1 != '\n'){
+				pe_space = 1;
+			}
+			continue;
+		}else if(c1 == '\r' && isspace(c2)){
+			pe_space = 1;
+		}else if(c1 == '\r'){
+			pe_space = 1;
+			c1 = fgetc(f1);
+			continue;
+		}else if(c1 == '\n' && c2 == '\r'){
+			c2 = fgetc(f2);
+			if(c2 != '\n'){
+				pe_space = 1;
+			}
+			continue;
+		}else if(c1 == '\n' && c2 == '\n'){
+			pe_space = 0;
+		}else if(c1 == '\n' && isspace(c2)){
+			pe_space = 1;
+			c2 = fgetc(f2);
+			continue;
+		}else if(c1 == '\n'){
+			c1 = fgetc(f1);
+			pe_n = 1;
+		}else if(isspace(c1) && c2 == '\r'){
+			pe_space=1;
+		}else if(isspace(c1) && c2 == '\n'){
+			pe_space = 1;
+			c1 = fgetc(f1);
+			continue;
+		}else if(isspace(c1) && isspace(c2)){
+			if(c1 != c2) pe_space=1;
+		}else if(isspace(c1)){
+			pe_space = 1;
+			c1 = fgetc(f1);
+			continue;
+		}else if(c2 == '\r'){
+			pe_space = 1;
+			c2 = fgetc(f2);
+			continue;
+		}else if(c2 == '\n'){
+			pe_n = 1;
+			c2 = fgetc(f2);
+			continue;
+		}else if(isspace(c2)){
+			pe_space = 1;
+			c2 = fgetc(f2);
+			continue;
+		}else{
+			if(pe_space || pe_n){
+				ret = OJ_PE;
+			}
+			if(c1 != c2){
+				ret = OJ_WA;
+				goto wzoj_end;
+			}
+		}
+		c1 = fgetc(f1);
+		c2 = fgetc(f2);
+	}
+
+wzoj_end:
+	if(f1) fclose(f1);
+	if(f2) fclose(f2);
+	/*  <todo>
+	if (ret == OJ_WA || ret==OJ_PE){
+		if(full_diff)
+			make_diff_out_full(f1, f2, c1, c2, file1);
+		else
+			make_diff_out_simple(f1, f2, c1, c2, file1);
+	}*/
+	switch(ret){
+		case OJ_AC:
+			verdict = "AC";
+			break;
+		case OJ_WA:
+			verdict = "WA";
+			break;
+		case OJ_PE:
+			verdict = "PE";
+			break;
+	}
+	return ret;
+}
+
 int get_proc_status(int pid, const char * mark) {
         FILE * pf;
         char fn[BUFFER_SIZE], buf[BUFFER_SIZE];
@@ -514,11 +639,19 @@ void run_testcase(Json::Value solution, Json::Value problem,
 			return;
 		}
 
-
-		//temp
-		testcase["verdict"] = "AC";
-		testcase["score"] = 100;
+		//compare
+		execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
+	            data_dir.c_str(), testcase_name.c_str());
+		int flag = compare_files("./run/data.ans", "./run/user.out", verdict);
+		testcase["verdict"] = verdict;
+		if(flag == OJ_AC){
+			testcase["score"] = 100;
+		}else{
+			testcase["score"] = 0;
+		}
 		post_testcase(testcase);
+
+		clean_run_dir();
 	}
 }
 
@@ -549,6 +682,12 @@ void run_solution(Json::Value solution, Json::Value problem,
 		             time_limit, memory_limit,
 		             data_dir, testcase_name);
 	}
+}
+
+void finishJudging(int sid){
+	std::map<std::string, std::string> par;
+	par["solution_id"] = std::to_string(sid);
+	http_post("/judger/finish-judging", par);
 }
 
 void judge_solution(int sid, int rid){
@@ -592,6 +731,8 @@ void judge_solution(int sid, int rid){
 
 	/*run solution*/
 	run_solution(solution, problem, time_limit, mem_limit);
-	
-	std::cerr<<"done "<<sid<<std::endl;
+
+	execute_cmd("/bin/rm ./Main");
+
+	finishJudging(sid);
 }
