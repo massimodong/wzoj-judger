@@ -25,7 +25,9 @@ wzoj_judger_SOURCES = \
 	jsoncpp.cpp \
 	json/json-forwards.h \
 	json/json.h \
-	judger.cc
+	judger.cc \
+	okcalls64.h \
+	okcalls32.h
 
 wzoj_judger_LDFLAGS = 
 

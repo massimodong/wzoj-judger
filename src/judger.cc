@@ -21,12 +21,28 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
+#include <sys/user.h>
+#include <sys/syscall.h>
 #include <dirent.h>
 #include <stdarg.h>
 
 #define STD_MB 1048576
 #define STD_F_LIM (STD_MB<<5)
 #define BUFFER_SIZE 512
+
+#ifdef __i386
+#include <okcalls32.h>
+#define REG_SYSCALL orig_eax
+#define REG_RET eax
+#define REG_ARG0 ebx
+#define REG_ARG1 ecx
+#else
+#include <okcalls64.h>
+#define REG_SYSCALL orig_rax
+#define REG_RET rax
+#define REG_ARG0 rdi
+#define REG_ARG1 rsi
+#endif
 
 int execute_cmd(const char * fmt, ...) {
 	char cmd[BUFFER_SIZE];
@@ -61,6 +77,60 @@ int isInFile(const char fname[]) {
 		return 0;
 	else
 		return l - 3;
+}
+
+long get_file_size(const char * filename) {
+        struct stat f_stat;
+
+        if (stat(filename, &f_stat) == -1) {
+                return 0;
+        }
+
+        return (long) f_stat.st_size;
+}
+
+void print_runtimeerror(char * err) {
+        FILE *ferr = fopen("./run/error.out", "a+");
+        fprintf(ferr, "Runtime Error:%s\n", err);
+        fclose(ferr);
+}
+
+int get_proc_status(int pid, const char * mark) {
+        FILE * pf;
+        char fn[BUFFER_SIZE], buf[BUFFER_SIZE];
+        int ret = 0; 
+        sprintf(fn, "/proc/%d/status", pid);
+        pf = fopen(fn, "re");
+        int m = strlen(mark);
+        while (pf && fgets(buf, BUFFER_SIZE - 1, pf)) {
+
+                buf[strlen(buf) - 1] = 0; 
+                if (strncmp(buf, mark, m) == 0) { 
+                        sscanf(buf + m + 1, "%d", &ret);
+                }
+        }
+        if (pf) 
+                fclose(pf);
+        return ret; 
+}
+
+
+const int  CALL_ARRAY_SIZE = 512;
+bool ALLOWED_CALLS[CALL_ARRAY_SIZE];
+void init_syscalls_limits(int lang){
+	if(OJ_DEBUG){
+		std::cout<<"init syscalls for "<<lang<<std::endl;
+	}
+	memset(ALLOWED_CALLS, 0, sizeof(ALLOWED_CALLS));
+	if(lang <= 1){ //C & C++
+		for(int i=0;i==0 || LANG_CV[i];++i){
+			ALLOWED_CALLS[LANG_CV[i]] = true;
+		}
+	}else if(lang == 2){ //Pascal
+		for(int i=0;i==0 || LANG_PV[i];++i){
+			ALLOWED_CALLS[LANG_PV[i]] = true;
+		}
+	}
 }
 
 void set_rlimits(){
@@ -242,6 +312,7 @@ void run_main(int time_limit, double memory_limit){
 	freopen("./user.out", "w", stdout);
 	freopen("./error.out", "w", stderr);
 	ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+
 	chroot("./");
 	//change user
 	while (setgid(1536) != 0)
@@ -250,6 +321,7 @@ void run_main(int time_limit, double memory_limit){
 		sleep(1);
 	while (setresuid(1536, 1536, 1536) != 0)
 		sleep(1);
+	
 	//rlimits:
 
 	//time limit
@@ -277,40 +349,191 @@ void run_main(int time_limit, double memory_limit){
 	LIM.rlim_cur = STD_MB * memory_limit / 2 * 3;
 	LIM.rlim_max = STD_MB * memory_limit * 2;
 	setrlimit(RLIMIT_AS, &LIM);
-
+	
 	//execute
 	execl("./Main", "./Main", (char *) NULL);
 	fflush(stderr);
 	exit(0);
 }
 
-void watch_main(pid_t pidApp, Json::Value problem){
+bool watch_main(pid_t pidApp, Json::Value problem,
+                int time_limit, double memory_limit,
+                int &time_used, double &memory_used, std::string &verdict
+                ){
+	if(OJ_DEBUG){
+		std::cout<<"watch solution "<<pidApp<<std::endl;
+	}
+	bool success = true;
+	int tempmemory;
+	int status, sig, exitcode;
+	bool *allowed_calls = ALLOWED_CALLS;
+	user_regs_struct reg;
+	rusage ruse;
+	memory_used = get_proc_status(pidApp, "VmRSS:") << 10;
+	while(true){
+		wait4(pidApp, &status, 0, &ruse);
+
+		//check memory
+		tempmemory = get_proc_status(pidApp, "VmPeak:") << 10;
+		if(tempmemory > memory_used){
+			memory_used = tempmemory;
+			if(memory_used > memory_limit*STD_MB){
+				verdict = "MLE";
+				ptrace(PTRACE_KILL, pidApp, NULL, NULL);
+				success = false;
+				break;
+			}
+		}
+
+		//check runtime error
+		if(WIFEXITED(status)){
+			break;
+		}
+		if(get_file_size("./run/error.out")){
+			verdict = "RE";
+			ptrace(PTRACE_KILL, pidApp, NULL, NULL);
+			success = false;
+			break;
+		}
+		exitcode = WEXITSTATUS(status);
+		if(exitcode == 0x05 || exitcode == 0){
+			//go on;
+			;
+		}else{
+			switch(exitcode){
+				case SIGCHLD:
+				case SIGALRM:
+					alarm(0);
+				case SIGKILL:
+				case SIGXCPU:
+					verdict = "TLE";
+					break;
+				case SIGXFSZ:
+					verdict = "OLE";
+					break;
+				default:
+					verdict = "RE";
+			}
+			print_runtimeerror(strsignal(exitcode));
+			success = false;
+			ptrace(PTRACE_KILL, pidApp, NULL, NULL);
+			break;
+		}
+		if(WIFSIGNALED(status)){
+			sig = WTERMSIG(status);
+			switch(sig){
+				case SIGCHLD:
+				case SIGALRM:
+					alarm(0);
+				case SIGKILL:
+				case SIGXCPU:
+					verdict = "TLE";
+					break;
+				case SIGXFSZ:
+					verdict = "OLE";
+					break;
+				default:
+					verdict = "RE";
+			}
+			print_runtimeerror(strsignal(exitcode));
+			success = false;
+			break;
+		}
+
+		//check the system calls
+		ptrace(PTRACE_GETREGS, pidApp, NULL, &reg);
+		if(allowed_calls[reg.REG_SYSCALL]){
+		}else{
+			verdict = "RE";
+			success = false;
+			char error[BUFFER_SIZE];
+			sprintf(error,
+			        "[ERROR] A Not allowed system call:%ld\n"
+					" TO FIX THIS , ask admin to add the CALLID into"
+					"corresponding LANG_XXV[] located at okcalls32/64.h ,"
+					"and recompile judger. \n",
+			        (long)reg.REG_SYSCALL);
+			print_runtimeerror(error);
+			ptrace(PTRACE_KILL, pidApp, NULL, NULL);
+		}
+		ptrace(PTRACE_SYSCALL, pidApp, NULL, NULL);
+	}
+	time_used = (ruse.ru_utime.tv_sec * 1000 + ruse.ru_utime.tv_usec / 1000);
+	time_used += (ruse.ru_stime.tv_sec * 1000 + ruse.ru_stime.tv_usec / 1000);
+	if(time_used > time_limit){
+		verdict = "TLE";
+		success = false;
+	}
+	if(OJ_DEBUG){
+		std::cout<<"time_used:"<<time_used<<std::endl
+			<<"memory_used:"<<memory_used / STD_MB<<"MB"<<std::endl
+			<<"verdict:"<<verdict<<std::endl;
+	}
+	waitpid(pidApp, NULL, 0);
+	return success;
+}
+
+void post_testcase(Json::Value testcase){
+	std::map<std::string, std::string> par;
+	par["solution_id"] = std::to_string(testcase["solution_id"].asInt());
+	par["filename"] = testcase["filename"].asString();
+	par["time_used"] = std::to_string(testcase["time_used"].asInt());
+	par["memory_used"] = std::to_string(testcase["memory_used"].asDouble());
+	par["verdict"] = testcase["verdict"].asString();
+	par["score"] = std::to_string(testcase["score"].asInt());
+	par["checklog"] = testcase["checklog"].asString();
+	http_post("judger/post-testcase", par);
 }
 
 void run_testcase(Json::Value solution, Json::Value problem,
                   int time_limit, double memory_limit,
-                  std::string data_dir, std::string testcase){
+                  std::string data_dir, std::string testcase_name){
 	execute_cmd("/bin/cp ./Main ./run/Main");
 	execute_cmd("/bin/cp %s/%s.in ./run/data.in",
-	            data_dir.c_str(), testcase.c_str());
+	            data_dir.c_str(), testcase_name.c_str());
 	pid_t pidApp = fork();
 	if(pidApp == 0){
 		run_main(time_limit, memory_limit);
 	}else{
-		watch_main(pidApp, problem);
+		Json::Value testcase;
+		int time_used;
+		double memory_used;
+		std::string verdict;
+
+		testcase["solution_id"] = solution["id"].asInt();
+		testcase["filename"] = testcase_name;
+
+		bool success = watch_main(pidApp, problem, time_limit, memory_limit,
+		              time_used, memory_used, verdict);
+		testcase["time_used"] = time_used;
+		testcase["memory_used"] = memory_used;
+		if(!success){
+			testcase["verdict"] = verdict;
+			testcase["score"] = 0;
+			post_testcase(testcase);
+			return;
+		}
+
+
+		//temp
+		testcase["verdict"] = "AC";
+		testcase["score"] = 100;
+		post_testcase(testcase);
 	}
 }
 
 void run_solution(Json::Value solution, Json::Value problem,
                   int time_limit, double memory_limit){
 	if(OJ_DEBUG){
-		std::cout<<"running solution"<<std::endl;
+		std::cout<<"running solution "<<solution["id"].asInt()<<std::endl;
 	}
 	DIR *dp;
 	dirent *dirp;
 	std::string data_dir(OJ_HOME);
 	data_dir += "/data/" + std::to_string(problem["id"].asInt());
 	dp = opendir(data_dir.c_str());
+
+	init_syscalls_limits(solution["language"].asInt());
 
 	while((dirp = readdir(dp)) != NULL){
 		// check if the file is *.in or not
