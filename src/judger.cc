@@ -283,7 +283,7 @@ bool checkout(int sid){
 		par["force"] = "true";
 	}
 	Json::Value val = http_post("/judger/checkout", par);
-	std::cout<<val["ok"].asString()<<std::endl;
+	//std::cout<<val["ok"].asString()<<std::endl;
 	return val["ok"].asBool();
 }
 
@@ -796,6 +796,7 @@ void run_solution(Json::Value solution, Json::Value problem,
 
 	while((dirp = readdir(dp)) != NULL){
 		// check if the file is *.in or not
+		// if yes, return name length
 		int namelen = isInFile(dirp->d_name);
 		if(namelen == 0) continue;
 		
@@ -865,6 +866,7 @@ void judge_solution(int sid, int rid){
 	/*run solution*/
 	run_solution(solution, problem, time_limit, mem_limit);
 
+	//clean up
 	execute_cmd("/bin/rm ./Main");
 	if(problem["spj"].asBool()){
 		execute_cmd("/bin/rm ./spj");
