@@ -28,7 +28,7 @@
 
 #define STD_MB 1048576
 #define STD_F_LIM (STD_MB<<5)
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 5120
 
 #ifdef __i386
 #include <okcalls32.h>
@@ -299,8 +299,11 @@ void set_workdir(int rid){
 	chdir(workdir.c_str());
 }
 
-void clean_run_dir(){
+void umount_run_dir(){
 	execute_cmd("/bin/umount ./run/*");
+}
+
+void clean_run_dir(){
 	execute_cmd("sudo --user=judger /bin/rm -R -f ./run/*");
 }
 
@@ -404,10 +407,76 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 		}else{
 			execute_cmd("/bin/cp ./run/Main ./Main");
 		}
-		
+
+		umount_run_dir();
 		clean_run_dir();
 		if(OJ_DEBUG){
 			std::cout<<"COMPILE STATUS:"<<status<<std::endl;
+		}
+		
+		return status;
+	}
+}
+
+bool compile_spj(Json::Value problem){
+	const char * CP_X[] = { "g++", "spj.cc", "-o", "spj", "-fno-asm", "-Wall",
+			"-lm", "--static", "-std=c++0x", NULL };
+	
+	pid_t pid;
+	pid = fork();
+	if(pid == 0){
+		chdir("./run");
+		struct rlimit LIM;
+		LIM.rlim_max = 60;
+		LIM.rlim_cur = 60;
+		setrlimit(RLIMIT_CPU, &LIM);
+		alarm(60);
+		LIM.rlim_max = 10 * STD_MB;
+		LIM.rlim_cur = 10 * STD_MB;
+		setrlimit(RLIMIT_FSIZE, &LIM);
+		LIM.rlim_max = STD_MB *256 ;
+		LIM.rlim_cur = STD_MB *256 ;
+		setrlimit(RLIMIT_AS, &LIM);
+
+		//execute_cmd("chown judger *");
+		execute_cmd("mkdir -p bin usr lib lib64 proc");
+		execute_cmd("mount -o bind /bin bin");
+		execute_cmd("mount -o bind /usr usr");
+		execute_cmd("mount -o bind /lib lib");
+#ifndef __i386
+		execute_cmd("mount -o bind /lib64 lib64");
+#endif
+		//execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
+		execute_cmd("mount -o bind /proc proc");
+
+		//copy spj.cc
+		std::string data_dir(OJ_HOME);
+		data_dir += "/data/" + std::to_string(problem["id"].asInt());
+		execute_cmd("/bin/cp %s/spj.cc ./spj.cc", data_dir.c_str());
+
+		chroot("./");
+
+		while(setgid(1536)!=0) sleep(1);
+		while(setuid(1536)!=0) sleep(1);
+		while(setresuid(1536, 1536, 1536)!=0) sleep(1);
+
+		freopen("ce.txt", "w", stderr);
+		
+		execvp(CP_X[0], (char * const *) CP_X);
+	}else{
+		int status = 0;
+		waitpid(pid, &status, 0);
+
+		if(status){
+			std::cerr<<"compile error!"<<std::endl;
+		}else{
+			execute_cmd("/bin/cp ./run/spj ./spj");
+		}
+
+		umount_run_dir();
+		clean_run_dir();
+		if(OJ_DEBUG){
+			std::cout<<"SPJ COMPILE STATUS:"<<status<<std::endl;
 		}
 		
 		return status;
@@ -479,6 +548,46 @@ void run_main(int time_limit, double memory_limit){
 	execl("./Main", "./Main", (char *) NULL);
 	fflush(stderr);
 	exit(0);
+}
+void run_spj(){
+	pid_t pid;
+	pid = fork();
+	if(pid == 0){
+		nice(19);
+		execute_cmd("/bin/cp ./spj ./run/spj");
+		chdir("./run");
+
+		chroot("./");
+		//change user
+		while (setgid(1536) != 0)
+			sleep(1);
+		while (setuid(1536) != 0)
+			sleep(1);
+		while (setresuid(1536, 1536, 1536) != 0)
+			sleep(1);
+	
+		//rlimits:
+
+		struct rlimit LIM;
+		LIM.rlim_max = 60;
+		LIM.rlim_cur = 60;
+		setrlimit(RLIMIT_CPU, &LIM);
+		alarm(60);
+		LIM.rlim_max = 10 * STD_MB;
+		LIM.rlim_cur = 10 * STD_MB;
+		setrlimit(RLIMIT_FSIZE, &LIM);
+		LIM.rlim_max = STD_MB *256 ;
+		LIM.rlim_cur = STD_MB *256 ;
+		setrlimit(RLIMIT_AS, &LIM);
+	
+		//execute
+		execl("./spj", "./spj", "./data.in", "user.out", "data.ans",
+		   "verdict.out", "score.out", "checklog.out", (char *) NULL);
+		exit(0);
+	}else{
+		int status = 0;
+		waitpid(pid, &status, 0);
+	}
 }
 
 bool watch_main(pid_t pidApp, Json::Value problem,
@@ -642,13 +751,30 @@ void run_testcase(Json::Value solution, Json::Value problem,
 		//compare
 		execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
 	            data_dir.c_str(), testcase_name.c_str());
-		int flag = compare_files("./run/data.ans", "./run/user.out", verdict);
-		testcase["verdict"] = verdict;
-		if(flag == OJ_AC){
-			testcase["score"] = 100;
+		if(problem["spj"].asBool()){
+			int score=0;
+			run_spj();
+			sscanf(readFile("./run/score.out").c_str(), "%d", &score);
+			
+			testcase["verdict"] = readFile("./run/verdict.out");
+			testcase["score"] = score;
+			testcase["checklog"] = readFile("./run/checklog.out");
+			if(OJ_DEBUG){
+				std::cout<<"verdict:"<<testcase["verdict"].asString()<<std::endl
+					<<"score:"<<testcase["score"].asInt()<<std::endl
+					<<"checklog:"<<testcase["checklog"].asString()<<std::endl;
+			}
 		}else{
-			testcase["score"] = 0;
+			int flag = compare_files("./run/data.ans",
+			                         "./run/user.out", verdict);
+			testcase["verdict"] = verdict;
+			if(flag == OJ_AC){
+				testcase["score"] = 100;
+			}else{
+				testcase["score"] = 0;
+			}
 		}
+		
 		post_testcase(testcase);
 
 		clean_run_dir();
@@ -728,11 +854,21 @@ void judge_solution(int sid, int rid){
 		update_solution(solution);
 		return;
 	}
+	solution["status"] = SL_RUNNING;
+	update_solution(solution);
+
+	/*compile spj*/
+	if(problem["spj"].asBool()){
+		compile_spj(problem);
+	}
 
 	/*run solution*/
 	run_solution(solution, problem, time_limit, mem_limit);
 
 	execute_cmd("/bin/rm ./Main");
+	if(problem["spj"].asBool()){
+		execute_cmd("/bin/rm ./spj");
+	}
 
 	finishJudging(sid);
 }
