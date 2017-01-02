@@ -496,6 +496,7 @@ void update_solution(Json::Value solution){
 	par["memory_used"] = std::to_string(solution["memory_used"].asDouble());
 	par["status"] = std::to_string(solution["status"].asInt());
 	par["score"] = std::to_string(solution["score"].asInt());
+	par["cnt_testcases"] =std::to_string(solution["cnt_testcases"].asInt());
 	http_post("/judger/update-solution", par);
 }
 
@@ -781,7 +782,21 @@ void run_testcase(Json::Value solution, Json::Value problem,
 	}
 }
 
-void run_solution(Json::Value solution, Json::Value problem,
+class comp_test_name{
+	public:
+	bool operator()(const std::string &a, const std::string &b){
+		if(a.length() != b.length()){
+			return a.length() < b.length();
+		}else{
+			return a < b;
+		}
+	}
+};
+/*
+bool comp_test_name(std::string a,std::string b){
+}*/
+
+void run_solution(Json::Value &solution, Json::Value problem,
                   int time_limit, double memory_limit){
 	if(OJ_DEBUG){
 		std::cout<<"running solution "<<solution["id"].asInt()<<std::endl;
@@ -794,21 +809,38 @@ void run_solution(Json::Value solution, Json::Value problem,
 
 	init_syscalls_limits(solution["language"].asInt());
 
+	std::set<std::string, comp_test_name> test_names;
 	while((dirp = readdir(dp)) != NULL){
 		// check if the file is *.in or not
 		// if yes, return name length
+		// otherwise, return 0
 		int namelen = isInFile(dirp->d_name);
 		if(namelen == 0) continue;
 		
 		std::string testcase_name(dirp->d_name);
 		testcase_name = testcase_name.substr(0,namelen);
+
+		test_names.insert(testcase_name);
+	}
+
+	solution["cnt_testcases"] = test_names.size();
+	update_solution(solution);
+
+	for(auto const &t: test_names){
+		run_testcase(solution, problem,
+		             time_limit, memory_limit,
+		             data_dir, t);
+	}
+
+	/*
+	while((dirp = readdir(dp)) != NULL){
 		if(OJ_DEBUG){
 			std::cout<<"found testcase:"<<testcase_name<<std::endl;
 		}
 		run_testcase(solution, problem,
 		             time_limit, memory_limit,
 		             data_dir, testcase_name);
-	}
+	}*/
 }
 
 void finishJudging(int sid){

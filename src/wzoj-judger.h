@@ -28,6 +28,7 @@
 #include <locale.h>
 #include <json/json.h>
 #include <vector>
+#include <set>
 #include <map>
 
 #define OJ_WT0 0
