@@ -824,6 +824,7 @@ void run_solution(Json::Value &solution, Json::Value problem,
 	}
 
 	solution["cnt_testcases"] = test_names.size();
+	solution["status"] = SL_RUNNING;
 	update_solution(solution);
 
 	for(auto const &t: test_names){
@@ -887,8 +888,6 @@ void judge_solution(int sid, int rid){
 		update_solution(solution);
 		return;
 	}
-	solution["status"] = SL_RUNNING;
-	update_solution(solution);
 
 	/*compile spj*/
 	if(problem["spj"].asBool()){
