@@ -720,66 +720,86 @@ void post_testcase(Json::Value testcase){
 	http_post("judger/post-testcase", par);
 }
 
+std::string get_answer(Json::Value solution, std::string filename){
+	std::map<std::string, std::string> par;
+	par["solution_id"] = std::to_string(solution["id"].asInt());
+	par["filename"] = filename;
+	Json::Value res = http_get("judger/get-answer", par);
+	return res["answer"].asString();
+}
+
 void run_testcase(Json::Value solution, Json::Value problem,
                   int time_limit, double memory_limit,
                   std::string data_dir, std::string testcase_name){
-	execute_cmd("/bin/cp ./Main ./run/Main");
+	Json::Value testcase;
+	int time_used;
+	double memory_used;
+	std::string verdict;
+	
 	execute_cmd("/bin/cp %s/%s.in ./run/data.in",
 	            data_dir.c_str(), testcase_name.c_str());
-	pid_t pidApp = fork();
-	if(pidApp == 0){
-		run_main(time_limit, memory_limit);
-	}else{
-		Json::Value testcase;
-		int time_used;
-		double memory_used;
-		std::string verdict;
+	testcase["solution_id"] = solution["id"].asInt();
+	testcase["filename"] = testcase_name;
 
-		testcase["solution_id"] = solution["id"].asInt();
-		testcase["filename"] = testcase_name;
-
-		bool success = watch_main(pidApp, problem, time_limit, memory_limit,
-		              time_used, memory_used, verdict);
-		testcase["time_used"] = time_used;
-		testcase["memory_used"] = memory_used;
-		if(!success){
-			testcase["verdict"] = verdict;
-			testcase["score"] = 0;
-			post_testcase(testcase);
-			return;
-		}
-
-		//compare
-		execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
-	            data_dir.c_str(), testcase_name.c_str());
-		if(problem["spj"].asBool()){
-			int score=0;
-			run_spj();
-			sscanf(readFile("./run/score.out").c_str(), "%d", &score);
-			
-			testcase["verdict"] = readFile("./run/verdict.out");
-			testcase["score"] = score;
-			testcase["checklog"] = readFile("./run/checklog.out");
-			if(OJ_DEBUG){
-				std::cout<<"verdict:"<<testcase["verdict"].asString()<<std::endl
-					<<"score:"<<testcase["score"].asInt()<<std::endl
-					<<"checklog:"<<testcase["checklog"].asString()<<std::endl;
-			}
+	if(problem["type"].asInt() != 3){//execute solution if needed
+		execute_cmd("/bin/cp ./Main ./run/Main");
+		pid_t pidApp = fork();
+		if(pidApp == 0){
+			run_main(time_limit, memory_limit);
+			exit(EXIT_SUCCESS);
 		}else{
-			int flag = compare_files("./run/data.ans",
-			                         "./run/user.out", verdict);
-			testcase["verdict"] = verdict;
-			if(flag == OJ_AC){
-				testcase["score"] = 100;
-			}else{
+			bool success = watch_main(pidApp, problem, time_limit, memory_limit,
+			              time_used, memory_used, verdict);
+			testcase["time_used"] = time_used;
+			testcase["memory_used"] = memory_used;
+			if(!success){
+				testcase["verdict"] = verdict;
 				testcase["score"] = 0;
+				post_testcase(testcase);
+				return;
 			}
+		}
+	}else if(problem["type"].asInt() == 3){//generate .out file
+		std::string answer = get_answer(solution, testcase_name);
+		if(OJ_DEBUG){
+			std::cout<<"answer:<"<<answer<<">"<<std::endl;
 		}
 		
-		post_testcase(testcase);
-
-		clean_run_dir();
+		FILE *answerfile = fopen("./run/user.out", "w");
+		fputs(answer.c_str(), answerfile);
+		fclose(answerfile);
 	}
+	
+	//compare
+	execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
+        data_dir.c_str(), testcase_name.c_str());
+	if(problem["spj"].asBool()){
+		int score=0;
+		run_spj();
+		sscanf(readFile("./run/score.out").c_str(), "%d", &score);
+			
+		testcase["verdict"] = readFile("./run/verdict.out");
+		testcase["score"] = score;
+		testcase["checklog"] = readFile("./run/checklog.out");
+		if(OJ_DEBUG){
+			std::cout<<"verdict:"<<testcase["verdict"].asString()<<std::endl
+				<<"score:"<<testcase["score"].asInt()<<std::endl
+				<<"checklog:"<<testcase["checklog"].asString()<<std::endl;
+		}
+	}else{
+		int flag = compare_files("./run/data.ans",
+		                         "./run/user.out", verdict);
+		testcase["verdict"] = verdict;
+		if(flag == OJ_AC){
+			testcase["score"] = 100;
+		}else{
+			testcase["score"] = 0;
+		}
+	}
+		
+	post_testcase(testcase);
+
+	clean_run_dir();
 }
 
 class comp_test_name{
@@ -878,15 +898,17 @@ void judge_solution(int sid, int rid){
 		mem_limit = MAX_MEM_LIMIT;
 
 	/*compile*/
-	std::string ce;
-	if(compile(solution, problem, ce)){
-		if(OJ_DEBUG){
-			std::cout<<"compile error!"<<std::endl;
+	if(problem["type"].asInt() != 3){//compile if is not "submit-answer prolem"
+		std::string ce;
+		if(compile(solution, problem, ce)){
+			if(OJ_DEBUG){
+				std::cout<<"compile error!"<<std::endl;
+			}
+			update_ce(sid ,ce);
+			solution["status"] = SL_JUDGED;
+			update_solution(solution);
+			return;
 		}
-		update_ce(sid ,ce);
-		solution["status"] = SL_JUDGED;
-		update_solution(solution);
-		return;
 	}
 
 	/*compile spj*/
@@ -894,11 +916,13 @@ void judge_solution(int sid, int rid){
 		compile_spj(problem);
 	}
 
-	/*run solution*/
+	/*run solution  (even if it is "submit-answer problem")*/
 	run_solution(solution, problem, time_limit, mem_limit);
 
 	//clean up
-	execute_cmd("/bin/rm ./Main");
+	if(problem["type"].asInt() != 3){
+		execute_cmd("/bin/rm ./Main");
+	}
 	if(problem["spj"].asBool()){
 		execute_cmd("/bin/rm ./spj");
 	}

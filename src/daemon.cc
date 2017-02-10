@@ -64,7 +64,7 @@ bool daemon_work(){
 			}
 		}
 	}
-	return false;
+	return true;
 }
 
 void get_jobs(std::vector<int> &jobs){
