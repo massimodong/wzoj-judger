@@ -354,6 +354,12 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 #endif
 		//execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
 		execute_cmd("mount -o bind /proc proc");
+		
+		if(problem["type"].asInt() == 2){//copy interact files
+			std::string data_dir(OJ_HOME);
+			data_dir += "/data/" + std::to_string(problem["id"].asInt());
+			execute_cmd (("/bin/cp " + data_dir + "/interact.h ./").c_str());
+		}
 
 		chroot("./");
 
@@ -503,9 +509,6 @@ void update_solution(Json::Value solution){
 void run_main(int time_limit, double memory_limit){
 	nice(19);
 	chdir("./run");
-	freopen("./data.in", "r", stdin);
-	freopen("./user.out", "w", stdout);
-	freopen("./error.out", "w", stderr);
 	ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
 	chroot("./");
@@ -551,9 +554,6 @@ void run_main(int time_limit, double memory_limit){
 	exit(0);
 }
 void run_spj(){
-	pid_t pid;
-	pid = fork();
-	if(pid == 0){
 		nice(19);
 		execute_cmd("/bin/cp ./spj ./run/spj");
 		chdir("./run");
@@ -585,10 +585,6 @@ void run_spj(){
 		execl("./spj", "./spj", "./data.in", "user.out", "data.ans",
 		   "verdict.out", "score.out", "checklog.out", (char *) NULL);
 		exit(0);
-	}else{
-		int status = 0;
-		waitpid(pid, &status, 0);
-	}
 }
 
 bool watch_main(pid_t pidApp, Json::Value problem,
@@ -735,31 +731,61 @@ void run_testcase(Json::Value solution, Json::Value problem,
 	int time_used;
 	double memory_used;
 	std::string verdict;
+	pid_t spj_pid;
+	int spj_main[2],main_spj[2];
 	
 	execute_cmd("/bin/cp %s/%s.in ./run/data.in",
 	            data_dir.c_str(), testcase_name.c_str());
 	testcase["solution_id"] = solution["id"].asInt();
 	testcase["filename"] = testcase_name;
 
-	if(problem["type"].asInt() != 3){//execute solution if needed
+	int problemType = problem["type"].asInt();
+
+	if(problemType != 3){//execute solution if needed
 		execute_cmd("/bin/cp ./Main ./run/Main");
-		pid_t pidApp = fork();
-		if(pidApp == 0){
-			run_main(time_limit, memory_limit);
-			exit(EXIT_SUCCESS);
-		}else{
-			bool success = watch_main(pidApp, problem, time_limit, memory_limit,
-			              time_used, memory_used, verdict);
-			testcase["time_used"] = time_used;
-			testcase["memory_used"] = memory_used;
-			if(!success){
-				testcase["verdict"] = verdict;
-				testcase["score"] = 0;
-				post_testcase(testcase);
-				return;
+
+		if(problemType == 2){//create pipe & run spj first
+			while(pipe(spj_main) == -1) sleep(3);
+			while(pipe(main_spj) == -1) sleep(3);
+			
+			spj_pid = fork();
+			if(spj_pid == 0){
+				dup2(main_spj[0],STDIN_FILENO);
+				dup2(spj_main[1],STDOUT_FILENO);
+				run_spj();
+				exit(EXIT_SUCCESS);
 			}
 		}
-	}else if(problem["type"].asInt() == 3){//generate .out file
+		
+		pid_t pidApp = fork();
+		if(pidApp == 0){
+			if(problemType == 1){
+				freopen("./run/data.in", "r", stdin);
+				freopen("./run/user.out", "w", stdout);
+				freopen("./run/error.out", "w", stderr);
+			}else{
+				dup2(spj_main[0],STDIN_FILENO);
+				dup2(main_spj[1],STDOUT_FILENO);
+				freopen("./run/error.out", "w", stderr);
+			}
+			run_main(time_limit, memory_limit);
+			exit(EXIT_SUCCESS);
+		}
+		bool success = watch_main(pidApp, problem, time_limit, memory_limit,
+		             time_used, memory_used, verdict);
+		testcase["time_used"] = time_used;
+		testcase["memory_used"] = memory_used;
+		if(!success){
+			testcase["verdict"] = verdict;
+			testcase["score"] = 0;
+			post_testcase(testcase);
+			clean_run_dir();
+			if(problemType == 2){
+				kill(spj_pid, SIGKILL);
+			}
+			return;
+		}
+	}else if(problemType == 3){//generate .out file
 		std::string answer = get_answer(solution, testcase_name);
 		if(OJ_DEBUG){
 			std::cout<<"answer:<"<<answer<<">"<<std::endl;
@@ -770,12 +796,22 @@ void run_testcase(Json::Value solution, Json::Value problem,
 		fclose(answerfile);
 	}
 	
-	//compare
+	//compare & complete testcase
 	execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
         data_dir.c_str(), testcase_name.c_str());
-	if(problem["spj"].asBool()){
+	if(problem["spj"].asBool() || problemType == 2){
 		int score=0;
-		run_spj();
+
+		if(problemType != 2){
+			spj_pid = fork();
+			if(spj_pid == 0){
+				run_spj();
+				exit(EXIT_SUCCESS);
+			}
+		}
+		int status = 0;
+		waitpid(spj_pid, &status, 0);
+		
 		sscanf(readFile("./run/score.out").c_str(), "%d", &score);
 			
 		testcase["verdict"] = readFile("./run/verdict.out");
@@ -912,7 +948,7 @@ void judge_solution(int sid, int rid){
 	}
 
 	/*compile spj*/
-	if(problem["spj"].asBool()){
+	if(problem["spj"].asBool() || problem["type"].asInt() == 2){
 		compile_spj(problem);
 	}
 
@@ -923,7 +959,7 @@ void judge_solution(int sid, int rid){
 	if(problem["type"].asInt() != 3){
 		execute_cmd("/bin/rm ./Main");
 	}
-	if(problem["spj"].asBool()){
+	if(problem["spj"].asBool() || problem["type"].asInt() == 2){
 		execute_cmd("/bin/rm ./spj");
 	}
 
