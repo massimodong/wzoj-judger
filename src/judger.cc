@@ -359,6 +359,9 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 			std::string data_dir(OJ_HOME);
 			data_dir += "/data/" + std::to_string(problem["id"].asInt());
 			execute_cmd (("/bin/cp " + data_dir + "/interact.h ./").c_str());
+			execute_cmd (("/bin/cp " + data_dir + "/interact.pas ./").c_str());
+			execute_cmd (("/bin/cp " + data_dir + 
+			              "/interact_main.pas ./Main.pas").c_str());
 		}
 
 		chroot("./");
@@ -382,7 +385,11 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 				fsrc = fopen("Main.cc", "w");
 				break;
 			case 2:
-				fsrc = fopen("Main.pas", "w");
+				if(problem["type"].asInt() == 2){
+					fsrc = fopen("solution.pas", "w");
+				}else{
+					fsrc = fopen("Main.pas", "w");
+				}
 				break;
 			default:
 				exit(EXIT_FAILURE);
