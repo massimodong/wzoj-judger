@@ -46,7 +46,7 @@
 #define OJ_CO 12
 #define OJ_TR 13
 
-const uid_t JUDGER_UID = 1536;
+const uid_t JUDGER_UID = 1537;
 const int MAX_TIME_LIMIT = 60000; // 1min
 const double MAX_MEM_LIMIT = 2048.00; // 2GB
 

@@ -366,9 +366,9 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 
 		chroot("./");
 
-		while(setgid(1536)!=0) sleep(1);
-		while(setuid(1536)!=0) sleep(1);
-		while(setresuid(1536, 1536, 1536)!=0) sleep(1);
+		while(setgid(JUDGER_UID)!=0) sleep(1);
+		while(setuid(JUDGER_UID)!=0) sleep(1);
+		while(setresuid(JUDGER_UID, JUDGER_UID, JUDGER_UID)!=0) sleep(1);
 
 		if (solution["language"].asInt() != 2) {
 			freopen("ce.txt", "w", stderr);
@@ -469,9 +469,9 @@ bool compile_spj(Json::Value problem){
 
 		chroot("./");
 
-		while(setgid(1536)!=0) sleep(1);
-		while(setuid(1536)!=0) sleep(1);
-		while(setresuid(1536, 1536, 1536)!=0) sleep(1);
+		while(setgid(JUDGER_UID)!=0) sleep(1);
+		while(setuid(JUDGER_UID)!=0) sleep(1);
+		while(setresuid(JUDGER_UID, JUDGER_UID, JUDGER_UID)!=0) sleep(1);
 
 		freopen("ce.txt", "w", stderr);
 		
@@ -520,11 +520,11 @@ void run_main(int time_limit, double memory_limit){
 
 	chroot("./");
 	//change user
-	while (setgid(1536) != 0)
+	while (setgid(JUDGER_UID) != 0)
 		sleep(1);
-	while (setuid(1536) != 0)
+	while (setuid(JUDGER_UID) != 0)
 		sleep(1);
-	while (setresuid(1536, 1536, 1536) != 0)
+	while (setresuid(JUDGER_UID, JUDGER_UID, JUDGER_UID) != 0)
 		sleep(1);
 	
 	//rlimits:
@@ -567,11 +567,11 @@ void run_spj(){
 
 		chroot("./");
 		//change user
-		while (setgid(1536) != 0)
+		while (setgid(JUDGER_UID) != 0)
 			sleep(1);
-		while (setuid(1536) != 0)
+		while (setuid(JUDGER_UID) != 0)
 			sleep(1);
-		while (setresuid(1536, 1536, 1536) != 0)
+		while (setresuid(JUDGER_UID, JUDGER_UID, JUDGER_UID) != 0)
 			sleep(1);
 	
 		//rlimits:
