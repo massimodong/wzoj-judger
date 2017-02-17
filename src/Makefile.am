@@ -29,6 +29,8 @@ wzoj_judger_SOURCES = \
 	okcalls64.h \
 	okcalls32.h
 
+wzoj_judger_CXXFLAGS = -std=c++11 
+
 wzoj_judger_LDFLAGS = 
 
 wzoj_judger_LDADD = $(LIBCURL_LIBS) 
