@@ -301,6 +301,7 @@ void set_workdir(int rid){
 
 void umount_run_dir(){
 	execute_cmd("/bin/umount ./run/*");
+	execute_cmd("/bin/umount ./run/etc/alternatives");
 }
 
 void clean_run_dir(){
@@ -344,15 +345,15 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 		LIM.rlim_cur = STD_MB *256 ;
 		setrlimit(RLIMIT_AS, &LIM);
 
-		//execute_cmd("chown judger *");
-		execute_cmd("mkdir -p bin usr lib lib64 proc");
+		execute_cmd("mkdir -p bin usr lib lib64 proc etc/alternatives");
+		execute_cmd("chown judger etc");
 		execute_cmd("mount -o bind /bin bin");
 		execute_cmd("mount -o bind /usr usr");
 		execute_cmd("mount -o bind /lib lib");
 #ifndef __i386
 		execute_cmd("mount -o bind /lib64 lib64");
 #endif
-		//execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
+		execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
 		execute_cmd("mount -o bind /proc proc");
 		
 		if(problem["type"].asInt() == 2){//copy interact files
