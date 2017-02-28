@@ -160,6 +160,11 @@ Json::Value raw_post(std::string url,
 				std::cerr<<"invalid token!"<<std::endl;
 				http_get_token();
 				break;
+			case 501:
+			case 502:
+			case 503:
+				sleep(10);
+				break;
 			case 401:
 				std::cerr<<"need login"<<std::endl;
 				http_login();
