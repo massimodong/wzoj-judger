@@ -179,7 +179,8 @@ Json::Value raw_post(std::string url,
 				return ret;
 			default:
 				std::cerr<<"unrecognized status code:"<<code<<std::endl;
-				exit(EXIT_FAILURE);
+				sleep(10);
+				break;
 		}
 	}
 	if(OJ_DEBUG){

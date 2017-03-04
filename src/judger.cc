@@ -255,6 +255,10 @@ void init_syscalls_limits(int lang){
 		for(int i=0;i==0 || LANG_PV[i];++i){
 			ALLOWED_CALLS[LANG_PV[i]] = true;
 		}
+	}else if(lang == 4){//Python
+		for(int i=0;i==0 || LANG_YV[i];++i){
+			ALLOWED_CALLS[LANG_YV[i]] = true;
+		}
 	}
 }
 
@@ -305,6 +309,7 @@ void umount_run_dir(){
 }
 
 void clean_run_dir(){
+	execute_cmd("/bin/rm ./run/dev/urandom");
 	execute_cmd("sudo --user=judger /bin/rm -R -f ./run/*");
 }
 
@@ -328,6 +333,7 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 	const char * CP_P[] =
 			{ "fpc", "Main.pas","-Cs32000000","-Sh", "-O2", "-Co",
 				"-Ct", "-Ci", NULL };
+	const char * CP_PY[] = {"/bin/cp", "Main.py", "Main", NULL};
 	
 	pid_t pid;
 	pid = fork();
@@ -392,6 +398,9 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 					fsrc = fopen("Main.pas", "w");
 				}
 				break;
+			case 4:
+				fsrc = fopen("Main.py", "w");
+				break;
 			default:
 				exit(EXIT_FAILURE);
 		}
@@ -407,6 +416,9 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 				break;
 			case 2:
 				execvp(CP_P[0], (char * const *) CP_P);
+				break;
+			case 4:
+				execvp(CP_PY[0], (char * const *) CP_PY);
 				break;
 			default:
 				exit(EXIT_FAILURE);
@@ -514,7 +526,21 @@ void update_solution(Json::Value solution){
 	http_post("/judger/update-solution", par);
 }
 
-void run_main(int time_limit, double memory_limit){
+void copy_python_runtime(){
+	execute_cmd("/bin/mkdir -p\
+		./run/lib ./run/lib64 ./run/usr ./run/etc/alternatives ./run/dev");
+	execute_cmd("chown judger ./run/etc &>/dev/null");
+	execute_cmd("/bin/mount --bind /lib ./run/lib &>/dev/null");
+	execute_cmd("/bin/mount --bind /lib64 ./run/lib64 &>/dev/null");
+	execute_cmd("/bin/mount --bind /usr ./run/usr &>/dev/null");
+	execute_cmd("/bin/mount --bind /etc/alternatives ./run/etc/alternatives &>/dev/null");
+	execute_cmd("/bin/mknod -m 0444 ./run/dev/urandom c 1 9 &>/dev/null");
+}
+
+void run_main(int time_limit, double memory_limit,int language){
+	if(language == 4){//python
+		copy_python_runtime();
+	}
 	nice(19);
 	chdir("./run");
 	ptrace(PTRACE_TRACEME, 0, NULL, NULL);
@@ -557,7 +583,16 @@ void run_main(int time_limit, double memory_limit){
 	setrlimit(RLIMIT_AS, &LIM);
 	
 	//execute
-	execl("./Main", "./Main", (char *) NULL);
+	switch(language){
+		case 0: //C
+		case 1: //C++
+		case 2: //Pascal
+			execl("./Main", "./Main", (char *) NULL);
+			break;
+		case 4: //python
+			execl("/usr/bin/python", "/usr/bin/python", "Main", (char *) NULL);
+			break;
+	}
 	fflush(stderr);
 	exit(0);
 }
@@ -709,6 +744,7 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 			<<"verdict:"<<verdict<<std::endl;
 	}
 	waitpid(pidApp, NULL, 0);
+	umount_run_dir();
 	return success;
 }
 
@@ -776,7 +812,7 @@ void run_testcase(Json::Value solution, Json::Value problem,
 				dup2(main_spj[1],STDOUT_FILENO);
 				freopen("./run/error.out", "w", stderr);
 			}
-			run_main(time_limit, memory_limit);
+			run_main(time_limit, memory_limit, solution["language"].asInt());
 			exit(EXIT_SUCCESS);
 		}
 		bool success = watch_main(pidApp, problem, time_limit, memory_limit,
@@ -803,7 +839,7 @@ void run_testcase(Json::Value solution, Json::Value problem,
 		fputs(answer.c_str(), answerfile);
 		fclose(answerfile);
 	}
-	
+
 	//compare & complete testcase
 	execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
         data_dir.c_str(), testcase_name.c_str());
