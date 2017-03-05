@@ -583,15 +583,18 @@ void run_main(int time_limit, double memory_limit,int language){
 	setrlimit(RLIMIT_AS, &LIM);
 	
 	//execute
-	switch(language){
-		case 0: //C
-		case 1: //C++
-		case 2: //Pascal
-			execl("./Main", "./Main", (char *) NULL);
-			break;
-		case 4: //python
-			execl("/usr/bin/python", "/usr/bin/python", "Main", (char *) NULL);
-			break;
+	while(true){
+		switch(language){
+			case 0: //C
+			case 1: //C++
+			case 2: //Pascal
+				execl("./Main", "./Main", (char *) NULL);
+				break;
+			case 4: //python
+				execl("/usr/bin/python", "/usr/bin/python", "Main", (char *) NULL);
+				break;
+		}
+		sleep(1);
 	}
 	fflush(stderr);
 	exit(0);
