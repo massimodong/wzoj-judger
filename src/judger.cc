@@ -583,7 +583,7 @@ void run_main(int time_limit, double memory_limit,int language){
 	setrlimit(RLIMIT_AS, &LIM);
 	
 	//execute
-	while(true){
+	for(int i=10;i;--i){
 		switch(language){
 			case 0: //C
 			case 1: //C++
@@ -752,15 +752,19 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 }
 
 void post_testcase(Json::Value testcase){
-	std::map<std::string, std::string> par;
-	par["solution_id"] = std::to_string(testcase["solution_id"].asInt());
-	par["filename"] = testcase["filename"].asString();
-	par["time_used"] = std::to_string(testcase["time_used"].asInt());
-	par["memory_used"] = std::to_string(testcase["memory_used"].asDouble());
-	par["verdict"] = testcase["verdict"].asString();
-	par["score"] = std::to_string(testcase["score"].asInt());
-	par["checklog"] = testcase["checklog"].asString();
-	http_post("judger/post-testcase", par);
+	pid_t pid = fork();
+	if(pid == 0){
+		std::map<std::string, std::string> par;
+		par["solution_id"] = std::to_string(testcase["solution_id"].asInt());
+		par["filename"] = testcase["filename"].asString();
+		par["time_used"] = std::to_string(testcase["time_used"].asInt());
+		par["memory_used"] = std::to_string(testcase["memory_used"].asDouble());
+		par["verdict"] = testcase["verdict"].asString();
+		par["score"] = std::to_string(testcase["score"].asInt());
+		par["checklog"] = testcase["checklog"].asString();
+		http_post("judger/post-testcase", par);
+		exit(EXIT_SUCCESS);
+	}
 }
 
 std::string get_answer(Json::Value solution, std::string filename){
