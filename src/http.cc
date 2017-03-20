@@ -196,17 +196,20 @@ Json::Value raw_post(std::string url,
  **/
 Json::Value http_get(std::string url,
                      std::map<std::string,std::string> par){
+	CURL *curl = curl_easy_init();
 	url = OJ_URL + url;
 	//std::cerr<<url.c_str();
 	
 	bool first_param = true;
 	for(auto const &p: par){
+		char *value = curl_easy_escape(curl, p.second.c_str(), 0);
 		if(first_param){
 			first_param = false;
-			url += "?" + p.first + "=" + p.second;
+			url += "?" + p.first + "=" + value;
 		}else{
-			url += "&" + p.first + "=" + p.second;
+			url += "&" + p.first + "=" + value;
 		}
+		curl_free(value);
 	}
 	if(OJ_DEBUG){
 		if(OJ_DEBUG){
@@ -225,6 +228,7 @@ Json::Value http_get(std::string url,
  **/
 Json::Value http_post(std::string url,
                       std::map<std::string,std::string> par){
+	CURL *curl = curl_easy_init();
 	url = OJ_URL + url;
 	//std::cerr<<url.c_str();
 	if(OJ_DEBUG){
@@ -233,7 +237,9 @@ Json::Value http_post(std::string url,
 	
 	std::string data;
 	for(auto const &p: par){
-		data += "&" + p.first + "=" + p.second;
+		char *value = curl_easy_escape(curl, p.second.c_str(), 0);
+		data += "&" + p.first + "=" + value;
+		curl_free(value);
 	}
 	if(OJ_DEBUG){
 		std::cout<<"post data:"<<data<<std::endl;
