@@ -217,6 +217,7 @@ Json::Value http_get(std::string url,
 		}
 	}
 
+	curl_easy_cleanup(curl);
 	return raw_post(url,std::string(""),false);
 }
 
@@ -244,6 +245,7 @@ Json::Value http_post(std::string url,
 	if(OJ_DEBUG){
 		std::cout<<"post data:"<<data<<std::endl;
 	}
-	
+
+	curl_easy_cleanup(curl);
 	return raw_post(url,data,true);
 }
