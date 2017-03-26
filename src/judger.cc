@@ -561,7 +561,7 @@ void run_main(int time_limit, double memory_limit,int language){
 	LIM.rlim_max = LIM.rlim_cur = time_limit / 1000 + 1;
 	setrlimit(RLIMIT_CPU, &LIM);
 	alarm(0);
-	alarm((time_limit/1000) * 10);
+	alarm((time_limit/1000) + 1);
 
 	//file limit
 	LIM.rlim_max = STD_F_LIM + STD_MB;
