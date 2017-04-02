@@ -775,7 +775,7 @@ std::string get_answer(Json::Value solution, std::string filename){
 	return res["answer"].asString();
 }
 
-void run_testcase(Json::Value solution, Json::Value problem,
+void run_testcase(Json::Value &solution, Json::Value problem,
                   int time_limit, double memory_limit,
                   std::string data_dir, std::string testcase_name){
 	Json::Value testcase;
@@ -826,6 +826,12 @@ void run_testcase(Json::Value solution, Json::Value problem,
 		             time_used, memory_used, verdict);
 		testcase["time_used"] = time_used;
 		testcase["memory_used"] = memory_used;
+		if(time_used > solution["time_used"].asInt()){
+			solution["time_used"] = time_used;
+		}
+		if(memory_used > solution["memory_used"].asDouble()){
+			solution["memory_used"] = memory_used;
+		}
 		if(!success){
 			testcase["verdict"] = verdict;
 			testcase["score"] = 0;
@@ -887,6 +893,7 @@ void run_testcase(Json::Value solution, Json::Value problem,
 	}
 		
 	post_testcase(testcase);
+	solution["score"] = solution["score"].asInt() + testcase["score"].asInt();
 
 	clean_run_dir();
 }
@@ -953,9 +960,16 @@ void run_solution(Json::Value &solution, Json::Value problem,
 	}*/
 }
 
-void finishJudging(int sid){
+void finishJudging(Json::Value &solution){
+	int cnt_testcases = solution["cnt_testcases"].asInt();
+	if(cnt_testcases > 0){
+		solution["score"] = solution["score"].asInt() / cnt_testcases;
+	}else{
+		solution["score"] = 0;
+	}
+	update_solution(solution);
 	std::map<std::string, std::string> par;
-	par["solution_id"] = std::to_string(sid);
+	par["solution_id"] = std::to_string(solution["id"].asInt());
 	http_post("/judger/finish-judging", par);
 }
 
@@ -1016,5 +1030,5 @@ void judge_solution(int sid, int rid){
 		execute_cmd("/bin/rm ./spj");
 	}
 
-	finishJudging(sid);
+	finishJudging(solution);
 }
