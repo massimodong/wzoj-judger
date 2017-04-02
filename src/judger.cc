@@ -850,6 +850,8 @@ void run_testcase(Json::Value solution, Json::Value problem,
 	//compare & complete testcase
 	execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
         data_dir.c_str(), testcase_name.c_str());
+	execute_cmd("/bin/cp %s/%s.out ./run/data.ans",
+        data_dir.c_str(), testcase_name.c_str());
 	if(problem["spj"].asBool() || problemType == 2){
 		int score=0;
 

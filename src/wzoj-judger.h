@@ -65,8 +65,7 @@ extern bool OJ_ALLOWADMIN;
 extern int OJ_SOLUTION_NO;
 
 extern const char *OJ_URL;
-extern const char *OJ_USERNAME;
-extern const char *OJ_PASSWORD;
+extern const char *OJ_TOKEN;
 extern int OJ_MAXRUNNING;
 extern int OJ_SLEEPTIME;
 

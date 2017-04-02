@@ -30,8 +30,7 @@ Json::Value jsonConfigValue;
  * read from configure file
  */
 const char *OJ_URL = NULL;
-const char *OJ_USERNAME = NULL;
-const char *OJ_PASSWORD = NULL;
+const char *OJ_TOKEN = NULL;
 int OJ_MAXRUNNING = 3;
 int OJ_SLEEPTIME = 10;
 
@@ -187,8 +186,7 @@ void init_config(){
 	config>>jsonConfigValue;
 
 	config_read_str(OJ_URL, "url");
-	config_read_str(OJ_USERNAME, "username");
-	config_read_str(OJ_PASSWORD, "password");
+	config_read_str(OJ_TOKEN, "token");
 	OJ_SLEEPTIME = jsonConfigValue["sleep_time"].asInt();
 	OJ_MAXRUNNING = jsonConfigValue["max_running"].asInt();
 
@@ -196,8 +194,7 @@ void init_config(){
 	
 	if(OJ_DEBUG){
 		std::cout<<"OJ_URL:"<<OJ_URL<<std::endl
-			<<"OJ_USERNAME:"<<OJ_USERNAME<<std::endl
-			<<"OJ_PASSWORD:"<<OJ_PASSWORD<<std::endl
+			<<"OJ_TOKEN:"<<OJ_TOKEN<<std::endl
 			<<"OJ_SLEEPTIME:"<<OJ_SLEEPTIME<<std::endl
 			<<"OJ_MAXRUNNING:"<<OJ_MAXRUNNING<<std::endl;
 		std::cout<<std::endl;

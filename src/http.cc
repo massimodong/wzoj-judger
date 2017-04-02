@@ -18,28 +18,9 @@
 #include <wzoj-judger.h>
 #include <curl/curl.h>
 
-std::string HTTP_TOKEN;
-
 Json::Value raw_post(std::string,std::string,bool isPost);
 Json::Value http_get(std::string, std::map<std::string, std::string>);
 Json::Value http_post(std::string, std::map<std::string, std::string>);
-
-void http_get_token(){
-	std::map<std::string, std::string> par;
-	Json::Value val = http_get("/ajax/token", par);
-	HTTP_TOKEN = val["_token"].asString();
-	if(OJ_DEBUG){
-		std::cout<<"GET TOKEN::"<<HTTP_TOKEN<<std::endl<<std::endl;;
-	}
-}
-
-void http_login(){
-	std::map<std::string, std::string> par;
-	par["name"] = OJ_USERNAME;
-	par["password"] = OJ_PASSWORD;
-	Json::Value val = http_post("/auth/login", par);
-	//std::cout<<val<<std::endl;
-}
 
 void init_http(){
 	/*remove old cookie file*/
@@ -48,32 +29,6 @@ void init_http(){
 
 	/*initiate*/
 	curl_global_init(CURL_GLOBAL_ALL);
-	http_get_token();
-	http_login();
-
-	/*check roles*/
-	bool isJudger=false,isAdmin=false;
-	std::map<std::string, std::string> par;
-	Json::Value roles = http_get("/ajax/roles", par);
-	for(int i=0;i<roles.size();++i){
-		if(OJ_DEBUG){
-			std::cout<<"Current user has role "
-				<<roles[i]["name"].asString()<<std::endl;
-		}
-		if(roles[i]["name"].asString() == "judger") isJudger = true;
-		if(roles[i]["name"].asString() == "admin") isAdmin = true;
-	}
-	if(isAdmin) isJudger = true;
-	if(isAdmin && !OJ_ALLOWADMIN){
-		std::cerr<<"A user with role \"admin\" is not allowed"<<std::endl
-			<<"Use --allow-admin.(Not recommended)"<<std::endl;
-		exit(EXIT_FAILURE);
-	}
-
-	if(!isJudger){
-		std::cerr<<"not judger!"<<std::endl;
-		exit(EXIT_FAILURE);
-	}
 }
 
 size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp){
@@ -129,10 +84,9 @@ Json::Value raw_post(std::string url,
 		/**
 		 * url and data
 		 **/
-		std::string data_with_token = "_token=" + HTTP_TOKEN + data;
 		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		if(isPost){
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDS,data_with_token.c_str());
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS,data.c_str());
 			//std::cerr<<data_with_token.c_str()<<std::endl;
 		}
 
@@ -157,22 +111,17 @@ Json::Value raw_post(std::string url,
 
 		switch(code){
 			case 500:
-				std::cerr<<"invalid token!"<<std::endl;
-				http_get_token();
-				break;
 			case 501:
 			case 502:
 			case 503:
 				sleep(10);
 				break;
 			case 401:
-				std::cerr<<"need login"<<std::endl;
-				http_login();
+				sleep(1);
 				break;
 			case 302:
 			case 200:
 				/*succeed*/
-				//std::cout<<"ok:\n"<<ret<<std::endl;
 				if(OJ_DEBUG){
 					std::cout<<std::endl;
 				}
@@ -197,18 +146,12 @@ Json::Value raw_post(std::string url,
 Json::Value http_get(std::string url,
                      std::map<std::string,std::string> par){
 	CURL *curl = curl_easy_init();
-	url = OJ_URL + url;
+	url = OJ_URL + url + "?judger_token=" + OJ_TOKEN;
 	//std::cerr<<url.c_str();
 	
-	bool first_param = true;
 	for(auto const &p: par){
 		char *value = curl_easy_escape(curl, p.second.c_str(), 0);
-		if(first_param){
-			first_param = false;
-			url += "?" + p.first + "=" + value;
-		}else{
-			url += "&" + p.first + "=" + value;
-		}
+		url += "&" + p.first + "=" + value;
 		curl_free(value);
 	}
 	if(OJ_DEBUG){
@@ -230,16 +173,22 @@ Json::Value http_get(std::string url,
 Json::Value http_post(std::string url,
                       std::map<std::string,std::string> par){
 	CURL *curl = curl_easy_init();
-	url = OJ_URL + url;
+	url = OJ_URL + url + "?judger_token=" + OJ_TOKEN;
 	//std::cerr<<url.c_str();
 	if(OJ_DEBUG){
 		std::cout<<"post url:"<<url<<std::endl;
 	}
 	
 	std::string data;
+	bool first_param = true;
 	for(auto const &p: par){
 		char *value = curl_easy_escape(curl, p.second.c_str(), 0);
-		data += "&" + p.first + "=" + value;
+		if(first_param){
+			data += p.first + "=" + value;
+			first_param = false;
+		}else{
+			data += "&" + p.first + "=" + value;
+		}
 		curl_free(value);
 	}
 	if(OJ_DEBUG){
