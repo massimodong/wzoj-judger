@@ -464,17 +464,17 @@ bool compile_spj(Json::Value problem){
 		LIM.rlim_cur = STD_MB *256 ;
 		setrlimit(RLIMIT_AS, &LIM);
 
-		//execute_cmd("chown judger *");
-		execute_cmd("mkdir -p bin usr lib lib64 proc");
+		execute_cmd("mkdir -p bin usr lib lib64 proc etc/alternatives");
+		execute_cmd("chown judger etc");
 		execute_cmd("mount -o bind /bin bin");
 		execute_cmd("mount -o bind /usr usr");
 		execute_cmd("mount -o bind /lib lib");
 #ifndef __i386
 		execute_cmd("mount -o bind /lib64 lib64");
 #endif
-		//execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
+		execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
 		execute_cmd("mount -o bind /proc proc");
-
+		
 		//copy spj.cc
 		std::string data_dir(OJ_HOME);
 		data_dir += "/data/" + std::to_string(problem["id"].asInt());
