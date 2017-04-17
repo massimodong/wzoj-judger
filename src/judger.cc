@@ -561,7 +561,7 @@ void run_main(int time_limit, double memory_limit,int language){
 	LIM.rlim_max = LIM.rlim_cur = time_limit / 1000 + 1;
 	setrlimit(RLIMIT_CPU, &LIM);
 	alarm(0);
-	alarm((time_limit/1000) + 1);
+	alarm((5 * time_limit/1000) + 1);
 
 	//file limit
 	LIM.rlim_max = STD_F_LIM + STD_MB;
@@ -752,19 +752,15 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 }
 
 void post_testcase(Json::Value testcase){
-	pid_t pid = fork();
-	if(pid == 0){
-		std::map<std::string, std::string> par;
-		par["solution_id"] = std::to_string(testcase["solution_id"].asInt());
-		par["filename"] = testcase["filename"].asString();
-		par["time_used"] = std::to_string(testcase["time_used"].asInt());
-		par["memory_used"] = std::to_string(testcase["memory_used"].asDouble());
-		par["verdict"] = testcase["verdict"].asString();
-		par["score"] = std::to_string(testcase["score"].asInt());
-		par["checklog"] = testcase["checklog"].asString();
-		http_post("judger/post-testcase", par);
-		exit(EXIT_SUCCESS);
-	}
+	std::map<std::string, std::string> par;
+	par["solution_id"] = std::to_string(testcase["solution_id"].asInt());
+	par["filename"] = testcase["filename"].asString();
+	par["time_used"] = std::to_string(testcase["time_used"].asInt());
+	par["memory_used"] = std::to_string(testcase["memory_used"].asDouble());
+	par["verdict"] = testcase["verdict"].asString();
+	par["score"] = std::to_string(testcase["score"].asInt());
+	par["checklog"] = testcase["checklog"].asString();
+	http_post("judger/post-testcase", par);
 }
 
 std::string get_answer(Json::Value solution, std::string filename){
