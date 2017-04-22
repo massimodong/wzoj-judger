@@ -89,7 +89,7 @@ long get_file_size(const char * filename) {
 }
 
 void print_runtimeerror(char * err) {
-        FILE *ferr = fopen("./run/error.out", "a+");
+        FILE *ferr = fopen("./error.out", "a+");
         fprintf(ferr, "Runtime Error:%s\n", err);
         fclose(ferr);
 }
