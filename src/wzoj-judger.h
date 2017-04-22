@@ -25,6 +25,7 @@
 #include <signal.h>
 #include <getopt.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <locale.h>
 #include <json/json.h>
 #include <vector>
@@ -91,3 +92,4 @@ Json::Value http_post(std::string, std::map<std::string, std::string>);
  * judger
  **/
 void judge_solution(int,int);
+int execute_cmd(const char * fmt, ...);

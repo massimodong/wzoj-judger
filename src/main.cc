@@ -60,6 +60,7 @@ bool already_running();
 void call_for_exit(int);
 void daemon_init();
 void init_config();
+void clean_run_dirs();
 
 int main(int argc,char *argv[])
 {
@@ -128,13 +129,15 @@ int main(int argc,char *argv[])
 	signal(SIGQUIT, call_for_exit);
     signal(SIGKILL, call_for_exit);
     signal(SIGTERM, call_for_exit);
+	signal(SIGINT, call_for_exit);
 	
 	init_config();
 	init_http();
 
+	clean_run_dirs();
 	if(OJ_SOLUTION_NO > 0){
 		judge_solution(OJ_SOLUTION_NO, 0);
-		exit(EXIT_SUCCESS);
+		call_for_exit (0);
 	}
 
 	if(!OJ_DEBUG){
@@ -158,7 +161,7 @@ int main(int argc,char *argv[])
 	}
 
 end:
-	return 0;
+	call_for_exit (0);
 }
 
 void config_read_str(const char *&cfg,const char *idx){
@@ -208,5 +211,24 @@ bool already_running(){
 	return false;
 }
 
+void clean_run_dirs(){
+	for(int i=0;i<OJ_MAXRUNNING;++i){
+		std::string workdir = std::string(OJ_HOME) + "/run" + std::to_string(i);
+		struct stat st = {0};
+		if(stat(workdir.c_str(), &st) != -1) {
+			chdir(workdir.c_str());
+			execute_cmd ("umount -l ./compile/bin ./compile/etc/alternatives\
+			./compile/lib ./compile/lib64 ./compile/proc ./compile/usr\
+			./python/etc/alternatives ./python/lib ./python/lib64 ./python/usr");
+			execute_cmd ("rm -Rf ./python/dev");
+			chdir("..");
+		}
+	}
+	execute_cmd ("sudo -u judger rm -Rf ./run*");
+}
+
 void call_for_exit(int s){
+	std::cout<<"EXIT JUDGER...";
+	clean_run_dirs();
+	exit(EXIT_SUCCESS);
 }
