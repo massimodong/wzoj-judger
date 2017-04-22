@@ -291,26 +291,54 @@ bool checkout(int sid){
 	return val["ok"].asBool();
 }
 
+void set_compile_workdir(std::string workdir){	
+	mkdir((workdir + "/compile").c_str(), 0700);
+	chown((workdir + "/compile").c_str(), JUDGER_UID, JUDGER_UID);
+	chdir((workdir + "/compile").c_str());
+	execute_cmd("mkdir -p bin usr lib lib64 proc etc/alternatives");
+	execute_cmd("chown judger etc");
+	execute_cmd("mount -o bind /bin bin");
+	execute_cmd("mount -o bind /usr usr");
+	execute_cmd("mount -o bind /lib lib");
+#ifndef __i386
+	execute_cmd("mount -o bind /lib64 lib64");
+#endif
+	execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
+	execute_cmd("mount -o bind /proc proc");
+}
+
+void set_standalone_workdir(std::string workdir){
+	mkdir((workdir + "/standalone").c_str(), 0700);
+	chown((workdir + "/standalone").c_str(), JUDGER_UID, JUDGER_UID);
+}
+
+void set_python_workdir(std::string workdir){
+	mkdir((workdir + "/python").c_str(), 0700);
+	chown((workdir + "/python").c_str(), JUDGER_UID, JUDGER_UID);
+	chdir((workdir + "/python").c_str());
+	execute_cmd("mkdir -p lib lib64 usr etc/alternatives dev");
+	execute_cmd("chown judger etc &>/dev/null");
+	execute_cmd("mount --bind /lib lib &>/dev/null");
+	execute_cmd("mount --bind /lib64 lib64 &>/dev/null");
+	execute_cmd("mount --bind /usr usr &>/dev/null");
+	execute_cmd("mount --bind /etc/alternatives etc/alternatives &>/dev/null");
+	execute_cmd("mknod -m 0444 dev/urandom c 1 9 &>/dev/null");
+}
+
 void set_workdir(int rid){
 	std::string workdir = std::string(OJ_HOME) + "/run" + std::to_string(rid);
 	struct stat st = {0};
 	if(stat(workdir.c_str(), &st) == -1) {
 		mkdir(workdir.c_str(), 0700);
-		mkdir((workdir + "/run").c_str(), 0700);
 		chown(workdir.c_str(), JUDGER_UID, JUDGER_UID);
-		chown((workdir + "/run").c_str(), JUDGER_UID, JUDGER_UID);
+	
+		set_compile_workdir(workdir);
+		
+		set_standalone_workdir(workdir);
+		
+		set_python_workdir(workdir);
 	}
 	chdir(workdir.c_str());
-}
-
-void umount_run_dir(){
-	execute_cmd("/bin/umount ./run/*");
-	execute_cmd("/bin/umount ./run/etc/alternatives");
-}
-
-void clean_run_dir(){
-	execute_cmd("/bin/rm ./run/dev/urandom");
-	execute_cmd("sudo --user=judger /bin/rm -R -f ./run/*");
 }
 
 Json::Value get_solution(int sid){
@@ -338,7 +366,7 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 	pid_t pid;
 	pid = fork();
 	if(pid == 0){
-		chdir("./run");
+		chdir("./compile");
 		struct rlimit LIM;
 		LIM.rlim_max = 60;
 		LIM.rlim_cur = 60;
@@ -350,17 +378,6 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 		LIM.rlim_max = STD_MB *256 ;
 		LIM.rlim_cur = STD_MB *256 ;
 		setrlimit(RLIMIT_AS, &LIM);
-
-		execute_cmd("mkdir -p bin usr lib lib64 proc etc/alternatives");
-		execute_cmd("chown judger etc");
-		execute_cmd("mount -o bind /bin bin");
-		execute_cmd("mount -o bind /usr usr");
-		execute_cmd("mount -o bind /lib lib");
-#ifndef __i386
-		execute_cmd("mount -o bind /lib64 lib64");
-#endif
-		execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
-		execute_cmd("mount -o bind /proc proc");
 		
 		if(problem["type"].asInt() == 2){//copy interact files
 			std::string data_dir(OJ_HOME);
@@ -429,13 +446,37 @@ bool compile(Json::Value solution, Json::Value problem, std::string &ce){
 		waitpid(pid, &status, 0);
 
 		if(status){
-			ce = readFile("./run/ce.txt");
+			ce = readFile("./compile/ce.txt");
 		}else{
-			execute_cmd("/bin/cp ./run/Main ./Main");
+			execute_cmd("/bin/mv ./compile/Main ./Main");
 		}
-
-		umount_run_dir();
-		clean_run_dir();
+		//remove files
+		if(problem["type"].asInt() == 2){//rm interact files
+			execute_cmd ("/bin/rm ./compile/interact.h");
+			execute_cmd ("/bin/rm ./compile/interact.pas");
+			execute_cmd ("/bin/rm ./compile/Main.pas");
+		}
+		execute_cmd ("/bin/rm ./compile/ce.txt");
+		switch(solution["language"].asInt()){
+			case 0:
+				execute_cmd ("/bin/rm ./compile/Main.c");
+				break;
+			case 1:
+				execute_cmd ("/bin/rm ./compile/Main.cc");
+				break;
+			case 2:
+				if(problem["type"].asInt() == 2){
+					execute_cmd ("/bin/rm ./compile/solution.* ./compile/interact.* ./compile/Main.*");
+				}else{
+					execute_cmd ("/bin/rm ./compile/Main.*");
+				}
+				break;
+			case 4:
+				execute_cmd ("/bin/rm ./compile/Main.py");
+				break;
+			default:
+				exit(EXIT_FAILURE);
+		}
 		if(OJ_DEBUG){
 			std::cout<<"COMPILE STATUS:"<<status<<std::endl;
 		}
@@ -451,7 +492,7 @@ bool compile_spj(Json::Value problem){
 	pid_t pid;
 	pid = fork();
 	if(pid == 0){
-		chdir("./run");
+		chdir("./compile");
 		struct rlimit LIM;
 		LIM.rlim_max = 60;
 		LIM.rlim_cur = 60;
@@ -464,17 +505,6 @@ bool compile_spj(Json::Value problem){
 		LIM.rlim_cur = STD_MB *256 ;
 		setrlimit(RLIMIT_AS, &LIM);
 
-		execute_cmd("mkdir -p bin usr lib lib64 proc etc/alternatives");
-		execute_cmd("chown judger etc");
-		execute_cmd("mount -o bind /bin bin");
-		execute_cmd("mount -o bind /usr usr");
-		execute_cmd("mount -o bind /lib lib");
-#ifndef __i386
-		execute_cmd("mount -o bind /lib64 lib64");
-#endif
-		execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
-		execute_cmd("mount -o bind /proc proc");
-		
 		//copy spj.cc
 		std::string data_dir(OJ_HOME);
 		data_dir += "/data/" + std::to_string(problem["id"].asInt());
@@ -496,11 +526,11 @@ bool compile_spj(Json::Value problem){
 		if(status){
 			std::cerr<<"compile error!"<<std::endl;
 		}else{
-			execute_cmd("/bin/cp ./run/spj ./spj");
+			execute_cmd("/bin/mv ./compile/spj ./spj");
 		}
-
-		umount_run_dir();
-		clean_run_dir();
+		execute_cmd ("/bin/rm ./compile/spj.cc");
+		execute_cmd ("/bin/rm ./compile/ce.txt");
+		
 		if(OJ_DEBUG){
 			std::cout<<"SPJ COMPILE STATUS:"<<status<<std::endl;
 		}
@@ -526,23 +556,8 @@ void update_solution(Json::Value solution){
 	http_post("/judger/update-solution", par);
 }
 
-void copy_python_runtime(){
-	execute_cmd("/bin/mkdir -p\
-		./run/lib ./run/lib64 ./run/usr ./run/etc/alternatives ./run/dev");
-	execute_cmd("chown judger ./run/etc &>/dev/null");
-	execute_cmd("/bin/mount --bind /lib ./run/lib &>/dev/null");
-	execute_cmd("/bin/mount --bind /lib64 ./run/lib64 &>/dev/null");
-	execute_cmd("/bin/mount --bind /usr ./run/usr &>/dev/null");
-	execute_cmd("/bin/mount --bind /etc/alternatives ./run/etc/alternatives &>/dev/null");
-	execute_cmd("/bin/mknod -m 0444 ./run/dev/urandom c 1 9 &>/dev/null");
-}
-
 void run_main(int time_limit, double memory_limit,int language){
-	if(language == 4){//python
-		copy_python_runtime();
-	}
-	nice(19);
-	chdir("./run");
+	nice(-20);
 	ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
 	chroot("./");
@@ -600,9 +615,8 @@ void run_main(int time_limit, double memory_limit,int language){
 	exit(0);
 }
 void run_spj(){
-		nice(19);
-		execute_cmd("/bin/cp ./spj ./run/spj");
-		chdir("./run");
+		nice(-20);
+		execute_cmd("/bin/cp ../spj ./spj");
 
 		chroot("./");
 		//change user
@@ -666,7 +680,7 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 		if(WIFEXITED(status)){
 			break;
 		}
-		if(get_file_size("./run/error.out")){
+		if(get_file_size("./error.out")){
 			verdict = "RE";
 			ptrace(PTRACE_KILL, pidApp, NULL, NULL);
 			success = false;
@@ -747,7 +761,6 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 			<<"verdict:"<<verdict<<std::endl;
 	}
 	waitpid(pidApp, NULL, 0);
-	umount_run_dir();
 	return success;
 }
 
@@ -780,8 +793,15 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 	std::string verdict;
 	pid_t spj_pid;
 	int spj_main[2],main_spj[2];
+
+	int language = solution["language"].asInt();
+	if(language == 4){//python
+		chdir("./python");
+	}else{
+		chdir("./standalone");
+	}
 	
-	execute_cmd("/bin/cp %s/%s.in ./run/data.in",
+	execute_cmd("/bin/cp %s/%s.in ./data.in",
 	            data_dir.c_str(), testcase_name.c_str());
 	testcase["solution_id"] = solution["id"].asInt();
 	testcase["filename"] = testcase_name;
@@ -789,7 +809,7 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 	int problemType = problem["type"].asInt();
 
 	if(problemType != 3){//execute solution if needed
-		execute_cmd("/bin/cp ./Main ./run/Main");
+		execute_cmd("/bin/cp ../Main ./Main");
 
 		if(problemType == 2){//create pipe & run spj first
 			while(pipe(spj_main) == -1) sleep(3);
@@ -807,13 +827,13 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 		pid_t pidApp = fork();
 		if(pidApp == 0){
 			if(problemType == 1){
-				freopen("./run/data.in", "r", stdin);
-				freopen("./run/user.out", "w", stdout);
-				freopen("./run/error.out", "w", stderr);
+				freopen("./data.in", "r", stdin);
+				freopen("./user.out", "w", stdout);
+				freopen("./error.out", "w", stderr);
 			}else{
 				dup2(spj_main[0],STDIN_FILENO);
 				dup2(main_spj[1],STDOUT_FILENO);
-				freopen("./run/error.out", "w", stderr);
+				freopen("./error.out", "w", stderr);
 			}
 			run_main(time_limit, memory_limit, solution["language"].asInt());
 			exit(EXIT_SUCCESS);
@@ -832,7 +852,6 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 			testcase["verdict"] = verdict;
 			testcase["score"] = 0;
 			post_testcase(testcase);
-			clean_run_dir();
 			if(problemType == 2){
 				kill(spj_pid, SIGKILL);
 			}
@@ -844,15 +863,15 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 			std::cout<<"answer:<"<<answer<<">"<<std::endl;
 		}
 		
-		FILE *answerfile = fopen("./run/user.out", "w");
+		FILE *answerfile = fopen("./user.out", "w");
 		fputs(answer.c_str(), answerfile);
 		fclose(answerfile);
 	}
 
 	//compare & complete testcase
-	execute_cmd("/bin/cp %s/%s.ans ./run/data.ans",
+	execute_cmd("/bin/cp %s/%s.ans ./data.ans",
         data_dir.c_str(), testcase_name.c_str());
-	execute_cmd("/bin/cp %s/%s.out ./run/data.ans",
+	execute_cmd("/bin/cp %s/%s.out ./data.ans",
         data_dir.c_str(), testcase_name.c_str());
 	if(problem["spj"].asBool() || problemType == 2){
 		int score=0;
@@ -867,31 +886,35 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 		int status = 0;
 		waitpid(spj_pid, &status, 0);
 		
-		sscanf(readFile("./run/score.out").c_str(), "%d", &score);
+		sscanf(readFile("./score.out").c_str(), "%d", &score);
 			
-		testcase["verdict"] = readFile("./run/verdict.out");
+		testcase["verdict"] = readFile("./verdict.out");
 		testcase["score"] = score;
-		testcase["checklog"] = readFile("./run/checklog.out");
+		testcase["checklog"] = readFile("./checklog.out");
+
+		execute_cmd ("/bin/rm Main spj data.in user.out error.out data.ans verdict.out score.out checklog.out");
+		
 		if(OJ_DEBUG){
 			std::cout<<"verdict:"<<testcase["verdict"].asString()<<std::endl
 				<<"score:"<<testcase["score"].asInt()<<std::endl
 				<<"checklog:"<<testcase["checklog"].asString()<<std::endl;
 		}
 	}else{
-		int flag = compare_files("./run/data.ans",
-		                         "./run/user.out", verdict);
+		int flag = compare_files("./data.ans",
+		                         "./user.out", verdict);
 		testcase["verdict"] = verdict;
 		if(flag == OJ_AC){
 			testcase["score"] = 100;
 		}else{
 			testcase["score"] = 0;
 		}
+		execute_cmd ("/bin/rm Main data.in user.out data.ans error.out");
 	}
+
+	chdir("../");
 		
 	post_testcase(testcase);
 	solution["score"] = solution["score"].asInt() + testcase["score"].asInt();
-
-	clean_run_dir();
 }
 
 class comp_test_name{
