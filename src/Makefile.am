@@ -27,7 +27,8 @@ wzoj_judger_SOURCES = \
 	json/json.h \
 	judger.cc \
 	okcalls64.h \
-	okcalls32.h
+	okcalls32.h \
+	sim.cc
 
 wzoj_judger_CXXFLAGS = -std=c++11 
 

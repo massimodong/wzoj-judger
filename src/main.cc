@@ -33,6 +33,7 @@ const char *OJ_URL = NULL;
 const char *OJ_TOKEN = NULL;
 int OJ_MAXRUNNING = 3;
 int OJ_SLEEPTIME = 10;
+bool OJ_SIMCHECK = false;
 
 /**
  * parameters
@@ -135,6 +136,9 @@ int main(int argc,char *argv[])
 	init_http();
 
 	clean_run_dirs();
+	if(OJ_SIMCHECK){
+		sim_daemon();
+	}
 	if(OJ_SOLUTION_NO > 0){
 		judge_solution(OJ_SOLUTION_NO, 0);
 		call_for_exit (0);
@@ -192,6 +196,7 @@ void init_config(){
 	config_read_str(OJ_TOKEN, "token");
 	OJ_SLEEPTIME = jsonConfigValue["sleep_time"].asInt();
 	OJ_MAXRUNNING = jsonConfigValue["max_running"].asInt();
+	OJ_SIMCHECK = jsonConfigValue["sim_check"].asBool();
 
 	OJ_MAXRUNNING = std::min(OJ_MAXRUNNING , 100);
 	

@@ -93,3 +93,11 @@ Json::Value http_post(std::string, std::map<std::string, std::string>);
  **/
 void judge_solution(int,int);
 int execute_cmd(const char * fmt, ...);
+Json::Value get_solution(int);
+
+/**
+ * sim
+ **/
+void sim_daemon();
+void sim_wake();
+void sim_kill();
