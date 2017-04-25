@@ -144,10 +144,10 @@ void sim_daemon(){
 	std::vector<int> solutions_id;
 	daemon_pid = fork();
 	if(daemon_pid != 0){
+		if(OJ_DEBUG){
+			std::cout<<"sim daemon pid:"<<daemon_pid<<std::endl;
+		}
 		return;
-	}
-	if(OJ_DEBUG){
-		std::cout<<"sim daemon pid:"<<daemon_pid<<std::endl;
 	}
 	sim_set_workdir();
 	do{
