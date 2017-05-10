@@ -642,7 +642,8 @@ void run_spj(){
 	
 		//execute
 		execl("./spj", "./spj", "./data.in", "user.out", "data.ans",
-		   "verdict.out", "score.out", "checklog.out", (char *) NULL);
+		   "verdict.out", "score.out", "checklog.out", "meta.out",
+		      (char *) NULL);
 		exit(0);
 }
 
@@ -783,6 +784,13 @@ std::string get_answer(Json::Value solution, std::string filename){
 	return res["answer"].asString();
 }
 
+void gen_solution_meta(Json::Value solution){
+	FILE *meta = fopen("meta.out", "w");
+	fprintf(meta, "%d\n", solution["user_id"].asInt());
+
+	fclose(meta);
+}
+
 void run_testcase(Json::Value &solution, Json::Value problem,
                   int time_limit, double memory_limit,
                   std::string data_dir, std::string testcase_name){
@@ -806,6 +814,10 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 	testcase["filename"] = testcase_name;
 
 	int problemType = problem["type"].asInt();
+
+	if(problem["spj"].asBool() || problemType == 2){
+		gen_solution_meta(solution);
+	}
 
 	if(problemType != 3){//execute solution if needed
 		execute_cmd("/bin/cp ../Main ./Main");
@@ -891,7 +903,7 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 		testcase["score"] = score;
 		testcase["checklog"] = readFile("./checklog.out");
 
-		execute_cmd ("/bin/rm Main spj data.in user.out error.out data.ans verdict.out score.out checklog.out");
+		execute_cmd ("/bin/rm Main spj data.in user.out error.out data.ans verdict.out score.out checklog.out meta.out");
 		
 		if(OJ_DEBUG){
 			std::cout<<"verdict:"<<testcase["verdict"].asString()<<std::endl
