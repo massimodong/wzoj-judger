@@ -156,8 +156,9 @@ int compare_files(const char *file1, const char *file2,
 			c2 = fgetc(f2);
 			continue;
 		}else if(c1 == '\n'){
-			c1 = fgetc(f1);
 			pe_n = 1;
+			c1 = fgetc(f1);
+			continue;
 		}else if(isspace(c1) && c2 == '\r'){
 			pe_space=1;
 		}else if(isspace(c1) && c2 == '\n'){
