@@ -969,6 +969,7 @@ void run_solution(Json::Value &solution, Json::Value problem,
 
 		test_names.insert(testcase_name);
 	}
+	closedir(dp);
 
 	solution["cnt_testcases"] = test_names.size();
 	solution["status"] = SL_RUNNING;

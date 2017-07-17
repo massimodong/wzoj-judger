@@ -112,6 +112,7 @@ void sim_work(int sid){
 			fprintf(files, "%s/%s\n", data_dir.c_str(), dirp->d_name);
 		}
 	}
+	closedir(dp);
 
 	fclose(files);
 
