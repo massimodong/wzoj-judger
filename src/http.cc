@@ -107,6 +107,7 @@ Json::Value raw_post(std::string url,
 
 		curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &code);
 
+		curl_slist_free_all(chunk);
 		curl_easy_cleanup(curl);
 
 		switch(code){

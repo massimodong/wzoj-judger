@@ -70,6 +70,7 @@ void sim_read_report(int sid, int &s2id, int &rate){
 		s2id = ts2;
 		rate = tr;
 	}
+	fclose(fsim);
 }
 
 void update_sim(int sid,int s2id, int rate){
@@ -92,8 +93,8 @@ void sim_work(int sid){
 	}
 
 	//data_dir
-	data_dir += "/data/" + std::to_string(solution["problem_id"].asInt()) +
-		"/ac/" + std::to_string(language) + "/";
+	data_dir += "/data/ac/" + std::to_string(solution["problem_id"].asInt()) +
+		+ "/" + std::to_string(language) + "/";
 	if(OJ_DEBUG){
 		std::cout<<"data_dir:"<<data_dir<<std::endl;
 	}
