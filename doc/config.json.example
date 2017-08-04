@@ -1,0 +1,7 @@
+{
+	"url": "localhost/",
+	"token": "token",
+	"sleep_time": 10,
+	"max_running": 1,
+	"sim_check": false
+}
