@@ -19,7 +19,7 @@ else
 
 	useradd -u $JUDGERUID -d /home/$JUDGERNAME -s /bin/bash $JUDGERNAME
 
-	chown -R $JUDGERNAME.$JUDGERNAME /home/$JUDERNAME
+	chown -R $JUDGERNAME.$JUDGERNAME /home/$JUDGERNAME
 fi
 
 ./autogen.sh
