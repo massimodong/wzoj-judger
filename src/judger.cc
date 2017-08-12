@@ -831,8 +831,12 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 			if(spj_pid == 0){
 				dup2(main_spj[0],STDIN_FILENO);
 				dup2(spj_main[1],STDOUT_FILENO);
+				close(main_spj[1]);close(spj_main[0]);
 				run_spj();
 				exit(EXIT_SUCCESS);
+			}else{
+				close(main_spj[0]);
+				close(spj_main[1]);
 			}
 		}
 		
@@ -845,10 +849,16 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 			}else{
 				dup2(spj_main[0],STDIN_FILENO);
 				dup2(main_spj[1],STDOUT_FILENO);
+				close(spj_main[1]);close(main_spj[0]);
 				freopen("./error.out", "w", stderr);
 			}
 			run_main(time_limit, memory_limit, solution["language"].asInt());
 			exit(EXIT_SUCCESS);
+		}else{
+			if(problemType == 2){
+				close(spj_main[0]);
+				close(main_spj[1]);
+			}
 		}
 		bool success = watch_main(pidApp, problem, time_limit, memory_limit,
 		             time_used, memory_used, verdict);
@@ -878,6 +888,9 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 		FILE *answerfile = fopen("./user.out", "w");
 		fputs(answer.c_str(), answerfile);
 		fclose(answerfile);
+	}
+
+	if(problemType == 2){
 	}
 
 	//compare & complete testcase
