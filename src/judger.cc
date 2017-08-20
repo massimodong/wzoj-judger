@@ -546,12 +546,14 @@ void update_ce(int sid, std::string ce){
 	http_post("/judger/update-ce", par);
 }
 void update_solution(Json::Value solution){
+	Json::FastWriter fastWriter;
 	std::map<std::string, std::string> par;
 	par["solution_id"] = std::to_string(solution["id"].asInt());
 	par["time_used"] = std::to_string(solution["time_used"].asInt());
 	par["memory_used"] = std::to_string(solution["memory_used"].asDouble());
 	par["status"] = std::to_string(solution["status"].asInt());
 	par["score"] = std::to_string(solution["score"].asInt());
+	par["testcases"] = fastWriter.write(solution["testcases"]);
 	par["cnt_testcases"] =std::to_string(solution["cnt_testcases"].asInt());
 	http_post("/judger/update-solution", par);
 }
@@ -661,6 +663,8 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 	bool *allowed_calls = ALLOWED_CALLS;
 	user_regs_struct reg;
 	rusage ruse;
+
+	time_used = 0;
 	memory_used = get_proc_status(pidApp, "VmRSS:") << 10;
 	while(true){
 		wait4(pidApp, &status, 0, &ruse);
@@ -698,6 +702,7 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 					alarm(0);
 				case SIGKILL:
 				case SIGXCPU:
+					time_used = (time_limit / 1000 + 1)*1000;
 					verdict = "TLE";
 					break;
 				case SIGXFSZ:
@@ -719,6 +724,7 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 					alarm(0);
 				case SIGKILL:
 				case SIGXCPU:
+					time_used = (time_limit / 1000 + 1)*1000;
 					verdict = "TLE";
 					break;
 				case SIGXFSZ:
@@ -750,8 +756,10 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 		}
 		ptrace(PTRACE_SYSCALL, pidApp, NULL, NULL);
 	}
-	time_used = (ruse.ru_utime.tv_sec * 1000 + ruse.ru_utime.tv_usec / 1000);
-	time_used += (ruse.ru_stime.tv_sec * 1000 + ruse.ru_stime.tv_usec / 1000);
+	if(!time_used){
+		time_used=(ruse.ru_utime.tv_sec * 1000 + ruse.ru_utime.tv_usec / 1000);
+		time_used+=(ruse.ru_stime.tv_sec * 1000 + ruse.ru_stime.tv_usec / 1000);
+	}
 	if(time_used > time_limit){
 		verdict = "TLE";
 		success = false;
@@ -763,18 +771,6 @@ bool watch_main(pid_t pidApp, Json::Value problem,
 	}
 	waitpid(pidApp, NULL, 0);
 	return success;
-}
-
-void post_testcase(Json::Value testcase){
-	std::map<std::string, std::string> par;
-	par["solution_id"] = std::to_string(testcase["solution_id"].asInt());
-	par["filename"] = testcase["filename"].asString();
-	par["time_used"] = std::to_string(testcase["time_used"].asInt());
-	par["memory_used"] = std::to_string(testcase["memory_used"].asDouble());
-	par["verdict"] = testcase["verdict"].asString();
-	par["score"] = std::to_string(testcase["score"].asInt());
-	par["checklog"] = testcase["checklog"].asString();
-	http_post("judger/post-testcase", par);
 }
 
 std::string get_answer(Json::Value solution, std::string filename){
@@ -792,7 +788,7 @@ void gen_solution_meta(Json::Value solution){
 	fclose(meta);
 }
 
-void run_testcase(Json::Value &solution, Json::Value problem,
+Json::Value run_testcase(Json::Value &solution, Json::Value problem,
                   int time_limit, double memory_limit,
                   std::string data_dir, std::string testcase_name){
 	Json::Value testcase;
@@ -873,11 +869,11 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 		if(!success){
 			testcase["verdict"] = verdict;
 			testcase["score"] = 0;
-			post_testcase(testcase);
+			testcase["checklog"] = "";
 			if(problemType == 2){
 				kill(spj_pid, SIGKILL);
 			}
-			return;
+			return testcase;
 		}
 	}else if(problemType == 3){//generate .out file
 		std::string answer = get_answer(solution, testcase_name);
@@ -933,13 +929,14 @@ void run_testcase(Json::Value &solution, Json::Value problem,
 		}else{
 			testcase["score"] = 0;
 		}
+		testcase["checklog"] = "";
 		execute_cmd ("/bin/rm Main data.in user.out data.ans error.out");
 	}
 
 	chdir("../");
-		
-	post_testcase(testcase);
+
 	solution["score"] = solution["score"].asInt() + testcase["score"].asInt();
+	return testcase;
 }
 
 class comp_test_name{
@@ -988,10 +985,17 @@ void run_solution(Json::Value &solution, Json::Value problem,
 	solution["status"] = SL_RUNNING;
 	update_solution(solution);
 
+	int user_wait_time = 0;
 	for(auto const &t: test_names){
-		run_testcase(solution, problem,
-		             time_limit, memory_limit,
-		             data_dir, t);
+		Json::Value testcase = run_testcase(solution, problem,
+		                                    time_limit, memory_limit,
+		                                    data_dir, t);
+		solution["testcases"].append(testcase);
+		user_wait_time += testcase["time_used"].asInt();
+		if(user_wait_time >= 300){
+			update_solution(solution);
+			user_wait_time = 0;
+		}
 	}
 
 	/*
