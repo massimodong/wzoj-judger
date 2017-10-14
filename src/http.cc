@@ -33,12 +33,8 @@ void init_http(){
 
 size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp){
 	//std::cout<<(char *)buffer<<std::endl;
-	Json::Reader reader;
 	size_t realsize = size * nmemb;
-	reader.parse((char *)buffer, *((Json::Value *)userp));
-	if(OJ_DEBUG){
-		std::cout<<(*((Json::Value *)userp))<<std::endl;
-	}
+	(*((std::string *)userp)) += (char *)buffer;
 	return realsize;
 }
 
@@ -54,6 +50,8 @@ Json::Value raw_post(std::string url,
                      std::string data,
                      bool isPost){
 	int code;
+	Json::Reader reader;
+	std::string ret_str;
 	Json::Value ret;
 	while(true){
 		CURL *curl = curl_easy_init();
@@ -101,9 +99,10 @@ Json::Value raw_post(std::string url,
 		 * prepare to receive data
 		 **/
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&ret);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&ret_str);
 
 		curl_easy_perform(curl);
+		reader.parse(ret_str.c_str(), ret);
 
 		curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &code);
 
