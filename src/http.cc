@@ -51,7 +51,7 @@ Json::Value raw_post(std::string url,
                      bool isPost){
 	int code;
 	Json::Reader reader;
-	std::string *ret_str = new std::string("");
+	std::string *ret_str;
 	Json::Value ret;
 	while(true){
 		CURL *curl = curl_easy_init();
@@ -71,6 +71,7 @@ Json::Value raw_post(std::string url,
 		if(!curl){
 			exit(EXIT_FAILURE);
 		}
+		ret_str = new std::string;
 
 		/**
 		 * Perform as an ajax request
