@@ -51,7 +51,7 @@ Json::Value raw_post(std::string url,
                      bool isPost){
 	int code;
 	Json::Reader reader;
-	std::string ret_str;
+	std::string *ret_str = new std::string("");
 	Json::Value ret;
 	while(true){
 		CURL *curl = curl_easy_init();
@@ -99,10 +99,11 @@ Json::Value raw_post(std::string url,
 		 * prepare to receive data
 		 **/
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&ret_str);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)ret_str);
 
 		curl_easy_perform(curl);
-		reader.parse(ret_str.c_str(), ret);
+		reader.parse(ret_str->c_str(), ret);
+		delete ret_str;
 
 		curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &code);
 
