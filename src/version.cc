@@ -38,10 +38,10 @@ void print_help(){
 	
 	puts("");
 	fputs("\
-	--debug           debug mode\n\
-	--cd=PATH         change judger's home directory\n\
-	--once            exit after first solution\n\
-	--allow-admin     allow judger with role \"admin\"\n",
+	-d, --debug           debug mode\n\
+	-c, --cd=PATH         change judger's home directory\n\
+	-a, --once            exit after first solution\n\
+	-s, --solution=sid    judge sid and exit\n",
 	      stdout);
 
 	puts("");

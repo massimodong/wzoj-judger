@@ -42,7 +42,6 @@ int OJ_DEBUG = false;
 char *OJ_PROGRAMNAME=NULL;
 char *OJ_HOME=NULL;
 bool OJ_ONCE = false;
-bool OJ_ALLOWADMIN = false;
 int OJ_SOLUTION_NO = -1;
 
 static const option longopts[] =
@@ -52,7 +51,6 @@ static const option longopts[] =
   { "debug", no_argument, NULL, 'd' },
   { "cd", required_argument, NULL, 'c'},
   { "once", no_argument, NULL, 'a'},
-  { "allow-admin", no_argument, NULL, 'm'},
   { "solution", required_argument, NULL, 's'},
   { NULL, 0, NULL, 0 } 
 };
@@ -87,10 +85,6 @@ int main(int argc,char *argv[])
 				break;
 			case 'a':
 				OJ_ONCE = true;
-				break;
-			case 'm':
-				OJ_ALLOWADMIN = true;
-				std::cout<<"WARNING: allowing admin users"<<std::endl;
 				break;
 			case 's':
 				sscanf(optarg, "%d", &OJ_SOLUTION_NO);
