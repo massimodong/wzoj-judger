@@ -143,19 +143,23 @@ int main(int argc,char *argv[])
 	}
 	system("/sbin/iptables -A OUTPUT -m owner --uid-owner judger -j DROP");
 
-	bool flag=true;
-	while(true){
-		while(flag){
-			flag = daemon_work();
-			if(flag && OJ_ONCE){
-				goto end;
+	if(OJ_ONCE || OJ_SLEEPTIME){
+		bool flag=true;
+		while(true){
+			while(flag){
+				flag = daemon_work();
+				if(flag && OJ_ONCE){
+					goto end;
+				}
 			}
+			if(OJ_DEBUG){
+				printf("all tasks finished\n");
+			}
+			sleep(OJ_SLEEPTIME);
+			flag = true;
 		}
-		if(OJ_DEBUG){
-			printf("all tasks finished\n");
-		}
-		sleep(OJ_SLEEPTIME);
-		flag = true;
+	}else{
+		listen_udp();
 	}
 
 end:

@@ -104,7 +104,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am_wzoj_judger_OBJECTS = wzoj_judger-main.$(OBJEXT) \
 	wzoj_judger-version.$(OBJEXT) wzoj_judger-daemon.$(OBJEXT) \
 	wzoj_judger-http.$(OBJEXT) wzoj_judger-jsoncpp.$(OBJEXT) \
-	wzoj_judger-judger.$(OBJEXT) wzoj_judger-sim.$(OBJEXT)
+	wzoj_judger-judger.$(OBJEXT) wzoj_judger-sim.$(OBJEXT) \
+	wzoj_judger-udp-listen.$(OBJEXT)
 wzoj_judger_OBJECTS = $(am_wzoj_judger_OBJECTS)
 am__DEPENDENCIES_1 =
 wzoj_judger_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -374,7 +375,8 @@ wzoj_judger_SOURCES = \
 	judger.cc \
 	okcalls64.h \
 	okcalls32.h \
-	sim.cc
+	sim.cc \
+	udp-listen.cc
 
 wzoj_judger_CXXFLAGS = -std=c++11 
 wzoj_judger_LDFLAGS = 
@@ -478,6 +480,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wzoj_judger-judger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wzoj_judger-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wzoj_judger-sim.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wzoj_judger-udp-listen.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wzoj_judger-version.Po@am__quote@
 
 .cc.o:
@@ -598,6 +601,20 @@ wzoj_judger-sim.obj: sim.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sim.cc' object='wzoj_judger-sim.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wzoj_judger_CXXFLAGS) $(CXXFLAGS) -c -o wzoj_judger-sim.obj `if test -f 'sim.cc'; then $(CYGPATH_W) 'sim.cc'; else $(CYGPATH_W) '$(srcdir)/sim.cc'; fi`
+
+wzoj_judger-udp-listen.o: udp-listen.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wzoj_judger_CXXFLAGS) $(CXXFLAGS) -MT wzoj_judger-udp-listen.o -MD -MP -MF $(DEPDIR)/wzoj_judger-udp-listen.Tpo -c -o wzoj_judger-udp-listen.o `test -f 'udp-listen.cc' || echo '$(srcdir)/'`udp-listen.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wzoj_judger-udp-listen.Tpo $(DEPDIR)/wzoj_judger-udp-listen.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='udp-listen.cc' object='wzoj_judger-udp-listen.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wzoj_judger_CXXFLAGS) $(CXXFLAGS) -c -o wzoj_judger-udp-listen.o `test -f 'udp-listen.cc' || echo '$(srcdir)/'`udp-listen.cc
+
+wzoj_judger-udp-listen.obj: udp-listen.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wzoj_judger_CXXFLAGS) $(CXXFLAGS) -MT wzoj_judger-udp-listen.obj -MD -MP -MF $(DEPDIR)/wzoj_judger-udp-listen.Tpo -c -o wzoj_judger-udp-listen.obj `if test -f 'udp-listen.cc'; then $(CYGPATH_W) 'udp-listen.cc'; else $(CYGPATH_W) '$(srcdir)/udp-listen.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wzoj_judger-udp-listen.Tpo $(DEPDIR)/wzoj_judger-udp-listen.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='udp-listen.cc' object='wzoj_judger-udp-listen.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wzoj_judger_CXXFLAGS) $(CXXFLAGS) -c -o wzoj_judger-udp-listen.obj `if test -f 'udp-listen.cc'; then $(CYGPATH_W) 'udp-listen.cc'; else $(CYGPATH_W) '$(srcdir)/udp-listen.cc'; fi`
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

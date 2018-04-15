@@ -100,3 +100,8 @@ Json::Value get_solution(int);
 void sim_daemon();
 void sim_wake();
 void sim_kill();
+
+/**
+ * udp
+ **/
+void listen_udp();

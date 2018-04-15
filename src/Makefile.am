@@ -28,7 +28,8 @@ wzoj_judger_SOURCES = \
 	judger.cc \
 	okcalls64.h \
 	okcalls32.h \
-	sim.cc
+	sim.cc \
+	udp-listen.cc
 
 wzoj_judger_CXXFLAGS = -std=c++11 
 
