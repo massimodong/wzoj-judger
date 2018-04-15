@@ -43,7 +43,6 @@ size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp){
  * 
  * url: request url
  * data: data to be sent
- * code: http status code
  * isPost: post or get
  **/
 Json::Value raw_post(std::string url,
