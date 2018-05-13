@@ -537,6 +537,7 @@ bool compile_spj(Json::Value problem){
 		
 		return status;
 	}
+	return 0;
 }
 
 void update_ce(int sid, std::string ce){
@@ -1010,12 +1011,6 @@ void run_solution(Json::Value &solution, Json::Value problem,
 }
 
 void finishJudging(Json::Value &solution){
-	int cnt_testcases = solution["cnt_testcases"].asInt();
-	if(cnt_testcases > 0){
-		solution["score"] = solution["score"].asInt() / cnt_testcases;
-	}else{
-		solution["score"] = 0;
-	}
 	update_solution(solution);
 	std::map<std::string, std::string> par;
 	par["solution_id"] = std::to_string(solution["id"].asInt());
