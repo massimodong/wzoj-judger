@@ -48,7 +48,7 @@ size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp){
 Json::Value raw_post(std::string url,
                      std::string data,
                      bool isPost){
-	int code;
+	long code;
 	Json::Reader reader;
 	std::string *ret_str;
 	Json::Value ret;

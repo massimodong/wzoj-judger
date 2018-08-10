@@ -168,9 +168,9 @@ end:
 
 void config_read_str(const char *&cfg,const char *idx){
 	char *buffer;
-	cfg = jsonConfigValue[idx].asString().c_str();
-	buffer = (char *)malloc(strlen(cfg)+1);
-	strcpy(buffer, cfg);
+	buffer = (char *)malloc(sizeof(char) *
+			(strlen(jsonConfigValue[idx].asString().c_str())+1));
+	strcpy(buffer, jsonConfigValue[idx].asString().c_str());
 	cfg = buffer;
 }
 
