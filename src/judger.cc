@@ -609,7 +609,7 @@ void run_main(int time_limit, double memory_limit,int language){
 				execl("./Main", "./Main", (char *) NULL);
 				break;
 			case 4: //python
-				execl("/usr/bin/python", "/usr/bin/python", "Main", (char *) NULL);
+				execl("/usr/bin/python3", "/usr/bin/python3", "Main", (char *) NULL);
 				break;
 		}
 		sleep(1);
