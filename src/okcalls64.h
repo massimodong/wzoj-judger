@@ -30,7 +30,7 @@ int LANG_PV[256] = {0,1,2,4,9,11,13,16,59,89,97,201,231,
 
 int LANG_YV[256] = { 0,1,2,3,4,5,6,8,9,10,11,12,13,14,16,21,32,39,41,42,59,
 	72,78,79,89,97,99,102,104,107,108,131,158,202,218,231,257,273
-		, 146, SYS_mremap, 158, 117, 60, 102, 191,318,
+		, 146, SYS_mremap, 158, 117, 60, 102, 191, 217, 302, 318,
 		SYS_access, SYS_arch_prctl, SYS_brk, SYS_close, SYS_execve,
 		SYS_exit_group, SYS_fcntl, SYS_fstat, SYS_futex, SYS_getcwd,
 		SYS_getdents, SYS_getegid, SYS_geteuid, SYS_getgid, SYS_getrlimit,
