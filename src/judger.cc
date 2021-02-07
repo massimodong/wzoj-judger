@@ -272,6 +272,11 @@ void set_rlimits(){
 	LIM.rlim_cur = 80 * STD_MB;
 	setrlimit(RLIMIT_FSIZE, &LIM);
 
+	// set the stack
+	LIM.rlim_cur = RLIM_INFINITY;
+	LIM.rlim_max = RLIM_INFINITY;
+	setrlimit(RLIMIT_STACK, &LIM);
+
 	LIM.rlim_max = STD_MB << 11;
 	LIM.rlim_cur = STD_MB << 11;
 	setrlimit(RLIMIT_AS, &LIM);
@@ -543,7 +548,7 @@ bool compile_spj(Json::Value problem){
 void update_ce(int sid, std::string ce){
 	std::map<std::string, std::string> par;
 	par["solution_id"] = std::to_string(sid);
-	par["ce"] = ce;
+	par["ce"] = ce.substr(0, 5000);
 	http_post("/judger/update-ce", par);
 }
 void update_solution(Json::Value solution){
@@ -589,11 +594,6 @@ void run_main(int time_limit, double memory_limit,int language){
 	//proc limit
 	LIM.rlim_cur = LIM.rlim_max = 1;
 	setrlimit(RLIMIT_NPROC, &LIM);
-
-	// set the stack
-	LIM.rlim_cur = STD_MB << 6;
-	LIM.rlim_max = STD_MB << 6;
-	setrlimit(RLIMIT_STACK, &LIM);
 
 	// set the memory
 	LIM.rlim_cur = STD_MB * memory_limit / 2 * 3;
