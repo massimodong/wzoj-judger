@@ -778,7 +778,7 @@ std::string get_answer(Json::Value solution, std::string filename){
 	std::map<std::string, std::string> par;
 	par["solution_id"] = std::to_string(solution["id"].asInt());
 	par["filename"] = filename;
-	Json::Value res = http_get("judger/get-answer", par);
+	Json::Value res = http_get("/judger/get-answer", par);
 	return res["answer"].asString();
 }
 
