@@ -288,7 +288,7 @@ void set_rlimits(){
 bool checkout(int sid){
 	std::map<std::string, std::string> par;
 	par["solution_id"]=std::to_string(sid);
-	if(sid == OJ_SOLUTION_NO){
+	if(sid == OJ_SOLUTION_NO && OJ_DEBUG){
 		par["force"] = "true";
 	}
 	Json::Value val = http_post("/judger/checkout", par);
