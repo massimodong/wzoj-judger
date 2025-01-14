@@ -227,7 +227,7 @@ void clean_run_dirs(){
 			chdir("..");
 		}
 	}
-	execute_cmd ("sudo -u judger rm -Rf ./run*");
+	execute_cmd ("rm -Rf ./run*");
 }
 
 void call_for_exit(int s){
