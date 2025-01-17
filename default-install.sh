@@ -21,7 +21,3 @@ else
 
 	chown -R $JUDGERNAME:$JUDGERNAME /home/$JUDGERNAME
 fi
-
-./autogen.sh
-make
-make install

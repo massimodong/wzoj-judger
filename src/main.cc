@@ -215,6 +215,7 @@ bool already_running(){
 }
 
 void clean_run_dirs(){
+	return;
 	for(int i=0;i<OJ_MAXRUNNING;++i){
 		std::string workdir = std::string(OJ_HOME) + "/run" + std::to_string(i);
 		struct stat st = {0};

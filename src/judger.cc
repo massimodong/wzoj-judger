@@ -300,16 +300,23 @@ void set_compile_workdir(std::string workdir){
 	mkdir((workdir + "/compile").c_str(), 0700);
 	chown((workdir + "/compile").c_str(), JUDGER_UID, JUDGER_UID);
 	chdir((workdir + "/compile").c_str());
-	execute_cmd("mkdir -p bin usr lib lib64 proc etc/alternatives");
-	execute_cmd("chown judger etc");
-	execute_cmd("mount -o bind /bin bin");
-	execute_cmd("mount -o bind /usr usr");
-	execute_cmd("mount -o bind /lib lib");
+	//execute_cmd("mkdir -p bin usr lib lib64 proc etc/alternatives");
+	//execute_cmd("mount -o bind /bin bin");
+	//execute_cmd("mount -o bind /usr usr");
+	//execute_cmd("mount -o bind /lib lib");
+	execute_cmd("cp -lR /bin bin");
+	execute_cmd("cp -lR /usr usr");
+	execute_cmd("cp -lR /lib lib");
 #ifndef __i386
-	execute_cmd("mount -o bind /lib64 lib64");
+	//execute_cmd("mount -o bind /lib64 lib64");
+	execute_cmd("cp -lR /lib64 lib64");
 #endif
-	execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
-	execute_cmd("mount -o bind /proc proc");
+	execute_cmd("mkdir -p etc");
+	//execute_cmd("mount -o bind /etc/alternatives etc/alternatives");
+	//execute_cmd("mount -o bind /proc proc");
+	execute_cmd("cp -lR /etc/alternatives etc/alternatives");
+
+	execute_cmd("chown judger etc");
 }
 
 void set_standalone_workdir(std::string workdir){
@@ -321,13 +328,23 @@ void set_python_workdir(std::string workdir){
 	mkdir((workdir + "/python").c_str(), 0700);
 	chown((workdir + "/python").c_str(), JUDGER_UID, JUDGER_UID);
 	chdir((workdir + "/python").c_str());
-	execute_cmd("mkdir -p lib lib64 usr etc/alternatives dev");
-	execute_cmd("chown judger etc &>/dev/null");
-	execute_cmd("mount --bind /lib lib &>/dev/null");
-	execute_cmd("mount --bind /lib64 lib64 &>/dev/null");
-	execute_cmd("mount --bind /usr usr &>/dev/null");
-	execute_cmd("mount --bind /etc/alternatives etc/alternatives &>/dev/null");
+	//execute_cmd("mkdir -p lib lib64 usr etc/alternatives dev");
+
+	execute_cmd("mkdir -p etc dev");
+
+	//execute_cmd("mount --bind /lib lib &>/dev/null");
+	//execute_cmd("mount --bind /lib64 lib64 &>/dev/null");
+	//execute_cmd("mount --bind /usr usr &>/dev/null");
+	//execute_cmd("mount --bind /etc/alternatives etc/alternatives &>/dev/null");
+	
+	execute_cmd("cp -lR /lib lib");
+	execute_cmd("cp -lR /lib64 lib64");
+	execute_cmd("cp -lR /usr usr");
+	execute_cmd("cp -lR /etc/alternatives etc/alternatives");
+
 	execute_cmd("mknod -m 0444 dev/urandom c 1 9 &>/dev/null");
+
+	execute_cmd("chown judger etc &>/dev/null");
 }
 
 void set_workdir(int rid){
